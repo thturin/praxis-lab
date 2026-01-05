@@ -2,15 +2,10 @@ const IORedis = require('ioredis');
 
 const parseRedisUrl = (url) => {
   const parsed = new URL(url);
-  const pathnameValue = parsed.pathname?.slice(1);
   return {
     host: parsed.hostname,
     port: Number(parsed.port) || 6379,
     password: parsed.password || undefined,
-    // username: parsed.username || undefined,
-    // db: pathnameValue ? Number(pathnameValue) : undefined,
-    // tls: parsed.protocol === 'rediss:',
-    // maxRetriesPerRequest: null
   };
 };
 
