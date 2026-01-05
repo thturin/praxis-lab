@@ -76,11 +76,10 @@ console.log('process.env.REDIS_URL',process.env.REDIS_URL);
 // Configure session store based on environment
 if (process.env.NODE_ENV === 'production') {
     const { RedisStore } = require('connect-redis');
-    const Redis = require('ioredis'); // Fix: use default import, not destructured
-    const redisClient = new Redis(process.env.REDIS_URL);
-    redisClient.on('error', (err) => console.error('Redis session error:', err));
-    redisClient.on('connect', () => console.log('Redis session store connected'));
-    sessionOptions.store = new RedisStore({ client: redisClient });
+    const { redis } = require('./config/redis'); // Reuse BullMQ's Redis client
+    redis.on('error', (err) => console.error('Redis session error:', err));
+    redis.on('connect', () => console.log('Redis session store connected'));
+    sessionOptions.store = new RedisStore({ client: redis });
 } else {
     // Use file store for local development
     const FileStore = require('session-file-store')(session);
