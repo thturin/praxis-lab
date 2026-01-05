@@ -75,14 +75,14 @@ console.log('process.env.REDIS_URL',process.env.REDIS_URL);
 
 // Configure session store based on environment
 if (process.env.NODE_ENV === 'production') {
-    const RedisStore = require("connect-redis").default;
     const { createClient } = require("redis");
+    const connectRedis = require("connect-redis");
+    const RedisStore = connectRedis.default || connectRedis;
 
     const sessionRedis = createClient({ url: process.env.REDIS_URL });
     sessionRedis.on("error", (err) => console.error("Redis session error:", err));
     sessionRedis.on("connect", () => console.log("Redis session store connected"));
 
-    // Connect without await - use .then() instead
     sessionRedis.connect().catch(err => console.error("Redis connect error:", err));
 
     sessionOptions.store = new RedisStore({
