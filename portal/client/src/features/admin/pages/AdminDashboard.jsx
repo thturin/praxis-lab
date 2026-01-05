@@ -51,17 +51,17 @@ const AdminDashboard = ({ user, onLogout }) => {
         }
     );
 
-    const onUpdateSubmission = (updatedSubmission)=>{
-        setSubmissions(prev=>prev.map(sub=>{
-            if (sub.id === updatedSubmission.id) {
-                return {
-                    ...sub,
-                    score: updatedSubmission.score
-                }
-            }
-            return sub;
-        }))
-    };
+    // const onUpdateSubmission = (updatedSubmission)=>{
+    //     setSubmissions(prev=>prev.map(sub=>{
+    //         if (sub.id === updatedSubmission.id) {
+    //             return {
+    //                 ...sub,
+    //                 score: updatedSubmission.score
+    //             }
+    //         }
+    //         return sub;
+    //     }))
+    // };
 
 
     //fetch assignmenbts, submissions, and sections
