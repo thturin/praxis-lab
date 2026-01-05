@@ -22,7 +22,7 @@ const buildRedisOptions = () => {
 };
 
 const createSessionStore = (session) => {
-    const RedisStore = require('connect-redis').default;
+    const RedisStore = require('connect-redis')(session);  // v6 syntax
     const redisOptions = buildRedisOptions();
     
     const sessionRedis = new Redis(redisOptions);
