@@ -9,7 +9,7 @@ const userRoutes = require('./routes/userRoutes');
 const sectionRoutes = require('./routes/sectionRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const authRoutes = require('./routes/authRoutes');
-const { PrismaClient } = require('@prisma/client');
+const {PrismaClient} = require('@prisma/client');
 //require('dotenv').config(); //load environment variables from .env
 //use .env in root
 
@@ -25,7 +25,7 @@ const allowedOrigins = [
 //you are already using an authentication method so you ca * origin accept any 
 app.use(cors({
     origin: allowedOrigins,
-    credentials: true,
+    credentials:true,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control']
     //cache-control is used in subsmissions/regrade so the browswer won't re-use old responses 
@@ -52,7 +52,7 @@ console.log('--------------------BEGIN----------------------');
 
 //REQUIRED FOR GITHUB Oauth
 const session = require('express-session');//ceaet a session
-app.set('trust proxy', 1); // trust 
+app.set('trust proxy',1); // trust 
 
 const primaryClient = process.env.CLIENT_URL || '';
 const isLocalClient = /localhost|127\.0\.0\.1/.test(primaryClient);
@@ -63,46 +63,44 @@ const sessionOptions = {
     rolling: true,
     name: 'PraxisLabSession',//no spaces or special characters
     cookie: {
-        maxAge: 60 * 60 * 1000,
-        sameSite: isLocalClient ? 'lax' : 'none',
-        secure: isLocalClient ? false : true,
+        maxAge: 60*60*1000,
+                sameSite: isLocalClient ? 'lax': 'none',
+                secure: isLocalClient ? false : true,
         httpOnly: true,
         domain: undefined
-    }
+  }
 };
-console.log('proces.env.NODE_ENV', process.env.NODE_ENV);
-console.log('process.env.REDIS_URL', process.env.REDIS_URL);
+console.log('proces.env.NODE_ENV',process.env.NODE_ENV);
+console.log('process.env.REDIS_URL',process.env.REDIS_URL);
 
 // Configure session store based on environment
 if (process.env.NODE_ENV === 'production') {
-    const RedisStore = require("connect-redis").default; // IMPORTANT
+    const RedisStore = require("connect-redis").default;
     const { createClient } = require("redis");
 
-    const sessionRedis = createClient({
-        url: process.env.REDIS_URL,
-    });
-
+    const sessionRedis = createClient({ url: process.env.REDIS_URL });
     sessionRedis.on("error", (err) => console.error("Redis session error:", err));
     sessionRedis.on("connect", () => console.log("Redis session store connected"));
 
-    // node-redis v4+ must connect
-    sessionRedis.connect().catch(console.error);
+    // Connect without await - use .then() instead
+    sessionRedis.connect().catch(err => console.error("Redis connect error:", err));
 
     sessionOptions.store = new RedisStore({
         client: sessionRedis,
-        prefix: "sess:",            // IMPORTANT: don't collide with BullMQ keys
-        // ttl: 60 * 60,            // optional: seconds; can leave unset
+        prefix: "sess:",
     });
 } else {
-    const FileStore = require("session-file-store")(session);
+    // Use file store for local development
+    const FileStore = require('session-file-store')(session);
     sessionOptions.store = new FileStore({
-        path: "./sessions",
+        path: './sessions',
         ttl: 24 * 60 * 60,
-        retries: 5,
+        retries: 5
     });
 }
+
 //THIS WILL BOOT THE BULLMQ WORKER ALONGSIDE THE API WHENEVER THE SERVER STARTS
-if (process.env.RUN_ASSIGNMENT_WORKER !== 'false') {
+if(process.env.RUN_ASSIGNMENT_WORKER!=='false'){
     require('./workers/assignmentDeletionWorker');
     require('./workers/submissionRegradeWorker');
 }
@@ -110,27 +108,27 @@ if (process.env.RUN_ASSIGNMENT_WORKER !== 'false') {
 //app.use required MIDDLEWARE function session()
 app.use(session(sessionOptions));
 
-app.get('/', (req, res) => {
+app.get('/', (req, res)=>{
     res.send('Backend is running!');
     console.log(req);
 });
 
 //add route for railway health checks
-app.get('/health', (req, res) => {
-    res.json({
-        status: 'healthy',
-        timestamp: new Date().toISOString(),
-        environment: process.env.NODE_ENV || 'empty'
-    });
+app.get('/health', (req,res)=>{
+  res.json({
+    status:'healthy',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'empty'
+  });
 });
 
 //API ROUTES
 app.use('/api/', submissionRoutes); //call the router object in submissionRoutes (it is exported)
 app.use('/api/assignments', assignmentRoutes); //call the router object in assignmentRoutes
-app.use('/api/', userRoutes);//two different endpoints /users and /login
-app.use('/api/sections', sectionRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/auth', authRoutes);
+app.use('/api/',userRoutes);//two different endpoints /users and /login
+app.use('/api/sections',sectionRoutes);
+app.use('/api/admin',adminRoutes);
+app.use('/api/auth',authRoutes);
 
 const PORT = process.env.PORT || 5000;
 
