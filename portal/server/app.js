@@ -76,10 +76,12 @@ console.log('process.env.REDIS_URL',process.env.REDIS_URL);
 // Configure session store based on environment
 if (process.env.NODE_ENV === 'production') {
     const { createClient } = require("redis");
-    const connectRedis = require("connect-redis");
-    const RedisStore = connectRedis.default || connectRedis;
+    const RedisStore = require("connect-redis")(session);
 
-    const sessionRedis = createClient({ url: process.env.REDIS_URL });
+    const sessionRedis = createClient({ 
+        url: process.env.REDIS_URL,
+        legacyMode: true  // Required for connect-redis v7
+    });
     sessionRedis.on("error", (err) => console.error("Redis session error:", err));
     sessionRedis.on("connect", () => console.log("Redis session store connected"));
 
