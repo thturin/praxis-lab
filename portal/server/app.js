@@ -76,7 +76,7 @@ console.log('process.env.REDIS_URL',process.env.REDIS_URL);
 // Configure session store based on environment
 if (process.env.NODE_ENV === 'production') {
     const { RedisStore } = require('connect-redis');
-    const { Redis } = require('ioredis');
+    const Redis = require('ioredis'); // Fix: use default import, not destructured
     const redisClient = new Redis(process.env.REDIS_URL);
     redisClient.on('error', (err) => console.error('Redis session error:', err));
     redisClient.on('connect', () => console.log('Redis session store connected'));
