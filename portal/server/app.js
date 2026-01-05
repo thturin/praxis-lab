@@ -71,14 +71,13 @@ const sessionOptions = {
   }
 };
 console.log('proces.env.NODE_ENV',process.env.NODE_ENV);
+console.log('process.env.REDIS_URL',process.env.REDIS_URL);
 
 // Configure session store based on environment
 if (process.env.NODE_ENV === 'production') {
     const { RedisStore } = require('connect-redis');
     const { Redis } = require('ioredis');
-    const redisClient = new Redis(process.env.REDIS_URL, {
-        maxRetriesPerRequest: null
-    });
+    const redisClient = new Redis(process.env.REDIS_URL);
     redisClient.on('error', (err) => console.error('Redis session error:', err));
     redisClient.on('connect', () => console.log('Redis session store connected'));
     sessionOptions.store = new RedisStore({ client: redisClient });
