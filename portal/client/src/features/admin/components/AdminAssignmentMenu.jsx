@@ -104,7 +104,7 @@ const AdminAssignmentMenu = ({
 
                 {sections?.map((section, idx) => {
                     const sectionAssignments = assignmentsBySection[section.id] || [];
-                    if (sectionAssignments.length === 0) return null;
+                    //if (sectionAssignments.length === 0) return null;
                     
                     const bgColor = sectionColors[idx % sectionColors.length];
                     const isExpanded = expandedSections[section.id];

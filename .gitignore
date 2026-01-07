@@ -31,6 +31,7 @@ sessions/
 portal/server/sessions/
 portal/server/templates/*
 !portal/server/templates/.gitkeep
+**/production-imports/
 
 # dotenv environment variables
 .env.*
