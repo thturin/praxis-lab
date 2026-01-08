@@ -53,11 +53,15 @@ const exportAssignmentsCsvByName = async (req, res) => {
 
         //if in production, use the environtment variable
         // Find the template file
+        console.log('DEBUG: __dirname =', __dirname);
+        console.log('DEBUG: folderPath =', folderPath);
+        console.log('DEBUG: Checking if folderPath exists:', fs.existsSync(folderPath));
         const files = fs.readdirSync(folderPath);
         const section = await prisma.section.findUnique({ where: { id: Number(sectionId) } });
         console.log(`Section info: ${JSON.stringify(section,null,2)}`);
         let templateFile = '';
         console.log('Files in template folder:',files);
+        console.log('DEBUG: Total file count:', files.length);
         files.forEach(file => {
             console.log('   Checking file:', file);
             if (file.includes(section.sectionCode)) {
