@@ -36,8 +36,6 @@ app.use(express.json());
 console.log('--------------------BEGIN----------------------');
 
 
-
-
 //REQUIRED FOR GITHUB Oauth
 const session = require('express-session');//ceaet a session
 app.set('trust proxy',1); // trust 

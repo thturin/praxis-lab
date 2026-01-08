@@ -181,7 +181,7 @@ const exportAssignmentsCsv = async (req, res) => {
         files.forEach(file => {
             const fileName = path.basename(file);
             //console.log(`LOOK HERE --> ${fileName} -  ${JSON.stringify(section,null,2)}`);
-            if (fileName.includes(section.sectionId)) {
+            if (fileName.includes(section.sectionCode)) {
                 console.log('File found');
                 templateFile = path.join(folderPath, file);
             };
