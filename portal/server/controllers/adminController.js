@@ -55,9 +55,10 @@ const exportAssignmentsCsvByName = async (req, res) => {
         // Find the template file
         const files = fs.readdirSync(folderPath);
         const section = await prisma.section.findUnique({ where: { id: Number(sectionId) } });
+        console.log(`Section info: ${JSON.stringify(section,null,2)}`);
         let templateFile = '';
         files.forEach(file => {
-            console.log(file);
+            console.log('   Checking file:', file);
             if (file.includes(section.sectionCode)) {
                 console.log('sectionCode found');
                 templateFile = path.join(folderPath, file);
