@@ -25,9 +25,9 @@ csvTemplateEnvVars.forEach(envVar => {
 
   // Build the path to the template file
   const templatePath = path.join(
-    process.cwd(),
-    'portal',
-    'server',
+    __dirname,
+    '..',
+    '..',
     'templates',
     `JUPITER_TEMPLATE_${templateNumber}.csv`
   );
