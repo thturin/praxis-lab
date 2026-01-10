@@ -29,13 +29,13 @@ const AdminAssignmentMenu = ({
         '#ede8f3', // muted deep purple
     ];
 
-    // Group assignments by section
+    // Group assignments by section and sort by due date (oldest to newest)
     const assignmentsBySection = useMemo(() => {
         const grouped = {};
-        
+
         assignments.forEach(assignment => {
             const sectionIds = assignment.sections?.map(s => s.sectionId) || [];
-            
+
             if (sectionIds.length === 0) {
                 if (!grouped['unassigned']) grouped['unassigned'] = [];
                 grouped['unassigned'].push(assignment);
@@ -46,7 +46,12 @@ const AdminAssignmentMenu = ({
                 });
             }
         });
-        
+
+        // Sort assignments in each section by id (oldest to newest)
+        Object.keys(grouped).forEach(key => {
+            grouped[key].sort((a, b) => a.id - b.id);//swap if evalution is negative
+        });
+
         return grouped;
     }, [assignments]);
 
@@ -167,7 +172,20 @@ const AdminAssignmentMenu = ({
                                                     if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent';
                                                 }}
                                             >
-                                                {ass.title}
+                                                <span>{ass.title}</span>
+                                                {ass.type && (
+                                                    <span style={{
+                                                        marginLeft: '8px',
+                                                        padding: '2px 8px',
+                                                        fontSize: '11px',
+                                                        fontWeight: 'bold',
+                                                        borderRadius: '3px',
+                                                        backgroundColor: ass.type === 'lab' ? '#4CAF50' : '#2196F3',
+                                                        color: 'white'
+                                                    }}>
+                                                        {ass.type === 'lab' ? 'LAB' : 'GITHUB'}
+                                                    </span>
+                                                )}
                                             </div>
                                         );
                                     })}
