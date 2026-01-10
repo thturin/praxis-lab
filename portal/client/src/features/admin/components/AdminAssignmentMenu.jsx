@@ -1,22 +1,15 @@
 import React, { useState } from 'react';
-import CreateAssignment from './CreateAssignment';
-import EditAssignment from './EditAssignment';
 import { useMemo } from 'react';
 
 const AdminAssignmentMenu = ({
     setSelectedAssignmentId,
     selectedAssignmentId,
     assignments,
-    selectedAssignmentObj,
     setTitle,
-    onAssignmentUpdate,
-    onAssignmentDelete,
-    onAssignmentCreate,
     sections
 }) => {
 
     const [expandedSections, setExpandedSections] = useState({});
-    const showCreateAssignment = selectedAssignmentId === -2;
 
     const sectionColors = [
         '#e8f0f7', // muted blue
@@ -256,12 +249,6 @@ const AdminAssignmentMenu = ({
                     </div>
                 )}
             </div>
-
-            {showCreateAssignment && <CreateAssignment
-                onAssignmentCreate={onAssignmentCreate} />}
-
-            {/* DISPLAY SELECTED ASSIGNMENT (DUE DATE, TITLE, TYPE ) */}
-            {selectedAssignmentObj && (<EditAssignment setSelectedAssignmentId={setSelectedAssignmentId} selectedAssignmentObj={selectedAssignmentObj} onAssignmentDelete={onAssignmentDelete} onAssignmentUpdate={onAssignmentUpdate} />)}
 
         </div>
     </>);

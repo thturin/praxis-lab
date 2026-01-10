@@ -8,6 +8,8 @@ import SectionSelection from '../components/SectionSelection';
 import LabBuilder from '../../lab/components/LabBuilder';
 import LabPreview from '../../lab/components/LabPreview';
 import SubmissionRegrade from '../components/SubmissionRegrade';
+import CreateAssignment from '../components/CreateAssignment';
+import EditAssignment from '../components/EditAssignment';
 
 
 const AdminDashboard = ({ user, onLogout }) => {
@@ -288,17 +290,41 @@ const AdminDashboard = ({ user, onLogout }) => {
 
                 {currentTab === 'create' && (
                     <div style={{ padding: '20px' }}>
-                        <AdminAssignmentMenu
-                            setSelectedAssignmentId={setSelectedAssignmentId}
-                            selectedAssignmentId={selectedAssignmentId}
-                            assignments={assignments}
-                            selectedAssignmentObj={selectedAssignmentObj}
-                            setTitle={setTitle}
-                            onAssignmentUpdate={onAssignmentUpdate}
-                            onAssignmentDelete={onAssignmentDelete}
-                            onAssignmentCreate={onAssignmentCreate}
-                            sections={sections}
-                        />
+                        {/* Side-by-side layout for assignment menu and edit/create form */}
+                        <div style={{
+                            display: 'flex',
+                            gap: '20px',
+                            marginBottom: '20px',
+                            alignItems: 'flex-start'
+                        }}>
+                            {/* Left side - Assignment Menu */}
+                            <div style={{ flex: '0 0 auto', minWidth: '600px' }}>
+                                <AdminAssignmentMenu
+                                    setSelectedAssignmentId={setSelectedAssignmentId}
+                                    selectedAssignmentId={selectedAssignmentId}
+                                    assignments={assignments}
+                                    setTitle={setTitle}
+                                    sections={sections}
+                                />
+                            </div>
+
+                            {/* Right side - Create/Edit Form */}
+                            <div style={{ flex: '1' }}>
+                                {selectedAssignmentId === -2 && (
+                                    <CreateAssignment onAssignmentCreate={onAssignmentCreate} />
+                                )}
+                                {selectedAssignmentObj && (
+                                    <EditAssignment
+                                        setSelectedAssignmentId={setSelectedAssignmentId}
+                                        selectedAssignmentObj={selectedAssignmentObj}
+                                        onAssignmentDelete={onAssignmentDelete}
+                                        onAssignmentUpdate={onAssignmentUpdate}
+                                    />
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Lab Builder below */}
                         {selectedAssignmentObj?.type === 'lab' && (
                             <LabBuilder
                                 blocks={blocks}
