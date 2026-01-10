@@ -7,3 +7,23 @@
   font-family: 'Courier New', Courier, monospace !important;
   white-space: pre-wrap !important;
 }
+
+/* List styling - MUST come after Tailwind to override resets */
+ul, ol {
+  list-style-position: outside !important;
+  margin-left: 2rem !important;
+  padding-left: 0.5rem !important;
+}
+
+ul {
+  list-style-type: disc !important;
+}
+
+ol {
+  list-style-type: decimal !important;
+}
+
+li {
+  display: list-item !important;
+  margin-bottom: 0.25rem !important;
+}

@@ -18,9 +18,10 @@ function MaterialEditor({ block, onMaterialChange, onMaterialDelete }) {
 
     const modules = {
         toolbar: [
-            ['bold', 'italic', 'underline'],
-            ['image'],//default quill image handler
-            ['clean']
+             ['bold', 'italic', 'underline'],
+            ['code-block'],
+            ['clean'],
+            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
         ]
     };
 

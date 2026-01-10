@@ -22,7 +22,8 @@ function QuestionEditor({ q, onQuestionChange, onQuestionDelete, level = 0 }) {
         toolbar: [
             ['bold', 'italic', 'underline'],
             ['code-block'],
-            ['clean']
+            ['clean'],
+            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
         ]
     }
     //DISPLAY PROMPT TEXT BOX
