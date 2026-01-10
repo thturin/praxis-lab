@@ -1,6 +1,7 @@
 import React from 'react';
 import ScoreDisplay from './ScoreDisplay';
 import Explanation from './Explanation';
+import AnswerKey from './AnswerKey';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { getImageUrlsFromHtml } from './fetchImages';

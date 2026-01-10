@@ -92,16 +92,6 @@ function LabBuilder({ blocks, setBlocks,
         return () => clearInterval(id);
     }, [saveLab]);
 
-    // const loadLabFromFile = async () => {
-    //     try {
-    //         const lab = await import('./U1T6.json');
-    //         //setTitle(lab.default.title || "");
-    //         setBlocks(lab.default.blocks || []);
-    //         console.log('Lab loaded from lab.json');
-    //     } catch (err) {
-    //         console.error('Lab did not load from file successfully', err.message);
-    //     }
-    // }
 
     const loadLabFromUserFile = (event) => {
         const file = event.target.files[0];

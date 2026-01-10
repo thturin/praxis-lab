@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import { getImageUrlsFromHtml } from './fetchImages';
@@ -6,6 +6,8 @@ import { getImageUrlsFromHtml } from './fetchImages';
 
 function MaterialEditor({ block, onMaterialChange, onMaterialDelete }) {
     const quillRef = useRef();
+    const [isExpanded, setIsExpanded] = useState(false);
+
     const update = (field, value) => {
         //ONCHANGE CREATES A NEW BLOCK OBJECT WITH UPDATED FIELD AND TYPE VALUES 
         //only update if value actually changed
@@ -27,30 +29,44 @@ function MaterialEditor({ block, onMaterialChange, onMaterialDelete }) {
 
 
     return (
-        <div className="p-4 border rounded mb-4 bg-white shadow">
-            <ReactQuill
-                ref={quillRef}
-                placeholder="Paste image or write here"
-                className="w-full border p-2 mb-2"
-                value={getImageUrlsFromHtml(block.content)}
-                // onChange handler doesn't receive a DOM event object, gives you content value directly
-                //in other words, you dont need to use e=>e.target.value
-                onChange={value => {
-                    update("content", value);
-                }}
-                modules={modules}
-                theme="snow"
-            />
-
-            {/* <div className="mt-2 p-2 border bg-gray-50"
-                dangerouslySetInnerHTML={{ __html: block.content }} /> */}
-
-            <button
-                onClick={onMaterialDelete}
-                className="bg-red-600 text-white px-2 py-1 rounded ml-2"
+        <div className="mb-4 border border-purple-200 bg-purple-50 rounded-md overflow-hidden shadow">
+            {/* Collapsible Header */}
+            <div
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="px-4 py-3 cursor-pointer hover:bg-purple-100 transition-colors flex items-center justify-between"
             >
-                Delete
-            </button>
+                <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-purple-500" aria-hidden="true" />
+                    <span className="font-semibold text-sm text-purple-800">Material Block</span>
+                </div>
+                <span className="text-purple-600 text-xs">
+                    {isExpanded ? '▼' : '▶'}
+                </span>
+            </div>
+
+            {/* Expanded Content */}
+            {isExpanded && (
+                <div className="px-4 pb-4">
+                    <ReactQuill
+                        ref={quillRef}
+                        placeholder="Paste image or write here"
+                        className="w-full border p-2 mb-2"
+                        value={getImageUrlsFromHtml(block.content)}
+                        onChange={value => {
+                            update("content", value);
+                        }}
+                        modules={modules}
+                        theme="snow"
+                    />
+
+                    <button
+                        onClick={onMaterialDelete}
+                        className="bg-red-600 text-white px-2 py-1 rounded ml-2"
+                    >
+                        Delete
+                    </button>
+                </div>
+            )}
         </div>
     )
 };
