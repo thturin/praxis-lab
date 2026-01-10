@@ -6,7 +6,6 @@ const folderPath = path.join(__dirname, '../templates');
 const csvParse = require('csv-parse/sync');
 
 
-
 const exportAssignmentsCsvByName = async (req, res) => {
     // Only admins can export
     if (req.user.role !== 'admin') {

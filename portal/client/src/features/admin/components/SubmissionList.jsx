@@ -50,8 +50,8 @@ const SubmissionList = ({
                     cmp = av.localeCompare(bv);
                     break;
                 case 'userId':
-                    av = a.userId || 0;
-                    bv = b.userId || 0;
+                    av = Number(a.userId) || 0;
+                    bv = Number(b.userId) || 0;
                     cmp = av === bv ? 0 : av < bv ? -1 : 1;
                     break;
                 case 'score':
