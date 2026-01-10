@@ -1,7 +1,6 @@
-import React from 'react';
+import { useState } from 'react';
 import ScoreDisplay from './ScoreDisplay';
 import Explanation from './Explanation';
-import AnswerKey from './AnswerKey';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { getImageUrlsFromHtml } from './fetchImages';
@@ -78,45 +77,64 @@ const SubQuestionEditor = ({ question, responses, setResponses, gradedResults, f
 };
 
 const QuestionBlock = ({ block, setResponses, responses, gradedResults, finalScore, showExplanations, isAdmin, sessionId, onScoreUpdated }) => {
+    const [isExpanded, setIsExpanded] = useState(true);
+
     return (
-        <div>
-            <div 
-                className="font-semibold mb-1" 
-                dangerouslySetInnerHTML={{ __html: getImageUrlsFromHtml(block.prompt) }} 
-            />
-            {block.subQuestions.length > 0 ? (
-                <div className="ml-4 border-l-2 pl-2">
-                    {block.subQuestions.map((sq, j) => (
-                        <SubQuestionEditor
-                            key={sq.id || j}
-                            question={sq}
+        <div className="mt-2 border border-orange-200 bg-orange-50 rounded-md overflow-hidden shadow-sm">
+            {/* Collapsible Header */}
+            <div
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="px-4 py-3 cursor-pointer hover:bg-orange-100 transition-colors flex items-center justify-between"
+            >
+                <div className="flex items-center gap-2">
+                    <span className="font-semibold text-sm text-orange-800">❓</span>
+                </div>
+                <span className="text-orange-600 text-xs">
+                    {isExpanded ? '▼' : '▶'}
+                </span>
+            </div>
+
+            {/* Expanded Content */}
+            {isExpanded && (
+                <div className="px-4 pb-4">
+                    <div
+                        className="font-semibold mb-1"
+                        dangerouslySetInnerHTML={{ __html: getImageUrlsFromHtml(block.prompt) }}
+                    />
+                    {block.subQuestions.length > 0 ? (
+                        <div className="ml-4 border-l-2 pl-2">
+                            {block.subQuestions.map((sq, j) => (
+                                <SubQuestionEditor
+                                    key={sq.id || j}
+                                    question={sq}
+                                    responses={responses}
+                                    setResponses={setResponses}
+                                    gradedResults={gradedResults}
+                                    finalScore={finalScore}
+                                    showExplanations={showExplanations}
+                                    isAdmin={isAdmin}
+                                    sessionId={sessionId}
+                                    onScoreUpdated={onScoreUpdated}
+                                />
+                            ))}
+                        </div>
+                    ) : (
+                        <SingleQuestionEditor
+                            blockId={block.id}
                             responses={responses}
                             setResponses={setResponses}
                             gradedResults={gradedResults}
                             finalScore={finalScore}
+                            block={block}
                             showExplanations={showExplanations}
                             isAdmin={isAdmin}
                             sessionId={sessionId}
                             onScoreUpdated={onScoreUpdated}
                         />
-                    ))}
+                    )}
                 </div>
-            ) : (
-                <SingleQuestionEditor
-                    blockId={block.id}
-                    responses={responses}
-                    setResponses={setResponses}
-                    gradedResults={gradedResults}
-                    finalScore={finalScore}
-                    block={block}
-                    showExplanations={showExplanations}
-                    isAdmin={isAdmin}
-                    sessionId={sessionId}
-                    onScoreUpdated={onScoreUpdated}
-                />
             )}
-
-    </div>
+        </div>
     );
 };
 
