@@ -6,7 +6,7 @@ import { getImageUrlsFromHtml } from './fetchImages';
 
 function MaterialEditor({ block, onMaterialChange, onMaterialDelete }) {
     const quillRef = useRef();
-    const [isExpanded, setIsExpanded] = useState(false);
+    const [isExpanded, setIsExpanded] = useState(true);
 
     const update = (field, value) => {
         //ONCHANGE CREATES A NEW BLOCK OBJECT WITH UPDATED FIELD AND TYPE VALUES 
@@ -36,8 +36,7 @@ function MaterialEditor({ block, onMaterialChange, onMaterialDelete }) {
                 className="px-4 py-3 cursor-pointer hover:bg-purple-100 transition-colors flex items-center justify-between"
             >
                 <div className="flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-purple-500" aria-hidden="true" />
-                    <span className="font-semibold text-sm text-purple-800">Material Block</span>
+                    <span className="font-semibold text-sm text-purple-800">💡 Material Block</span>
                 </div>
                 <span className="text-purple-600 text-xs">
                     {isExpanded ? '▼' : '▶'}

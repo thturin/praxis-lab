@@ -8,7 +8,7 @@ import { getImageUrlsFromHtml } from './fetchImages';
 function QuestionEditor({ q, onQuestionChange, onQuestionDelete, level = 0 }) {
     const [showAnswerKey, setShowAnswerKey] = useState(false);
     const [showExplanation, setShowExplanation] = useState(false);
-    const [isExpanded, setIsExpanded] = useState(false);
+    const [isExpanded, setIsExpanded] = useState(true);
     //onChange passed down from the parent so everything stays in sync
     //INFINITE LOOP OCCURRING EVERY KEYSTROKE TRIGGERS ONCHANGE
     //DO NOT UPDATE IF VALUE HASN'T CHANGED
@@ -38,9 +38,8 @@ function QuestionEditor({ q, onQuestionChange, onQuestionDelete, level = 0 }) {
                 className="px-4 py-3 cursor-pointer hover:bg-orange-100 transition-colors flex items-center justify-between"
             >
                 <div className="flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-orange-500" aria-hidden="true" />
                     <span className="font-semibold text-sm text-orange-800">
-                        {level === 0 ? 'Question Block' : 'Sub Question'}
+                        {level === 0 ? '❓ Question Block' : '❓ Sub Question'}
                     </span>
                 </div>
                 <span className="text-orange-600 text-xs">
