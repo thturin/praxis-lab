@@ -1,3 +1,4 @@
+//REDIS CONFIGURATION FOR GENERAL PURPOSE REDIS USAGE IN THE APP NOT FOR SESSIONS
 const IORedis = require('ioredis');
 
 const parseRedisUrl = (url) => {

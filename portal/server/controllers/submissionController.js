@@ -40,7 +40,7 @@ const verifyGithubOwnership = async (req, res) => {
         // const repoParts = repoName.split('-');
         //if username contains '-'... find prefix first u1p1-calculator
         const isOwner = repoName.toLowerCase().includes(githubUsername.toLowerCase());
-        const assignmentPrefixMatch = repoName.match(/u\d+[pt]\d+/i); //case insensitive
+        const assignmentPrefixMatch = repoName.match(/u\d(?:[pt]\d)?/i); //case insensitive - matches u3, u1p1, u1t1
         assignmentPrefix = assignmentPrefixMatch ? assignmentPrefixMatch[0] : '';
 
 
@@ -85,12 +85,11 @@ const calculateLateScore = (submissionDate, dueDateInput, score) => { //dueDate 
 };
 
 const scoreGithubSubmission = async (url, path, assignmentTitle, submittedAt, dueDate) => { //clone student's repo pasted into submission portal
-    //confirm that both the submission type and url verify that it is a googledoc
     console.log('-----Score Github Submission---------');
     try {
         ///DETEREMINE IF TITLE IN GITHUB URL MATCHES ASSIGNMENT NAME 
-        //Example : U1T1-printlnVsPrint --> [U1T1]
-        const assignmentPrefixMatch = assignmentTitle.match(/u\d+[pt]\d+/i);
+        //Example : U1T1-printlnVsPrint --> [U1T1] or [U3] or [U1P1]
+        const assignmentPrefixMatch = assignmentTitle.match(/u\d(?:[pt]\d)?/i);
         const assignmentTitlePrefix = assignmentPrefixMatch ? assignmentPrefixMatch[0] : '';
         if (assignmentPrefix === '') {
             return {

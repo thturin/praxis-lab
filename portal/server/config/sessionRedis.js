@@ -1,3 +1,4 @@
+//THIS REDIS SCRIPT IS FOR THE SESSION REDIS STORE ONLY IN APP.JS PRODUCTION USE ONLY
 const Redis = require('ioredis');
 
 const parseRedisUrl = (url) => {
