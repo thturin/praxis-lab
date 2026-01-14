@@ -22,24 +22,22 @@ const verifyGithubOwnership = async (req, res) => {
                 success: false,
                 output: '❌ No GitHub account linked. Please link your GitHub account first.'
             });
-        } // Extract username from GitHub URL
+        } // Extract username and repo from GitHub URL
 
-        //https://github.com/APCSA-Turin/u1p1-calculator-thturin
-        const repoNameMatch = url.match(/github\.com\/APCSA-Turin\/([^\/]+)/);
-        if (!repoNameMatch) {
+        //https://github.com/username/u1p1-calculator
+        const urlMatch = url.match(/github\.com\/([^\/]+)\/([^\/]+)/);
+        if (!urlMatch) {
             return res.status(400).json({
                 success: false,
-                output: "'❌ You do not belong to the github classroom APCSA-Turin'"
+                output: '❌ Invalid GitHub URL format. Expected: github.com/username/repository'
             });
         }
 
-        const repoName = repoNameMatch[1]; // e.g., 'u1p1-calculator-thturin'
-        //https://github.com/APCSA-Turin/u1t6-programming-challenge-calculator-thturin.git
-        // console.log(repoName);
-        // // Extract GitHub username from repo name (after last '-')
-        // const repoParts = repoName.split('-');
-        //if username contains '-'... find prefix first u1p1-calculator
-        const isOwner = repoName.toLowerCase().includes(githubUsername.toLowerCase());
+        const urlUsername = urlMatch[1]; // e.g., 'thturin'
+        const repoName = urlMatch[2]; // e.g., 'u1p1-calculator'
+
+        // Verify ownership by comparing GitHub usernames
+        const isOwner = urlUsername.toLowerCase() === githubUsername.toLowerCase();
         const assignmentPrefixMatch = repoName.match(/u\d(?:[pt]\d)?/i); //case insensitive - matches u3, u1p1, u1t1
         assignmentPrefix = assignmentPrefixMatch ? assignmentPrefixMatch[0] : '';
 
