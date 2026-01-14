@@ -38,6 +38,7 @@ const verifyGithubOwnership = async (req, res) => {
 
         // Verify ownership by comparing GitHub usernames
         const isOwner = urlUsername.toLowerCase() === githubUsername.toLowerCase();
+        console.log(urlUsername.toLowerCase(), githubUsername.toLowerCase());
         const assignmentPrefixMatch = repoName.match(/u\d(?:[pt]\d)?/i); //case insensitive - matches u3, u1p1, u1t1
         assignmentPrefix = assignmentPrefixMatch ? assignmentPrefixMatch[0] : '';
 
