@@ -83,6 +83,7 @@ const loginUser = async (req, res) => {
                 role: true,
                 sectionId: true, //only for students
                 isSuperAdmin: true,
+                githubUsername: true,
                 adminSections: { //only for admin
                     select: {
                         sectionId: true

@@ -19,6 +19,9 @@ const StudentDashboard = ({ user, onLogout }) => {
 
 //GET ALL ASSIGNMENTS and  SUBMISSIONS
     useEffect(() => {
+        console.log('here is the user object in student dashboard', user);
+    },[user]);
+    useEffect(() => {
         const fetchData = async () => {
             try {
                 const subRes = await axios.get(`${process.env.REACT_APP_API_HOST}/submissions`);

@@ -54,10 +54,12 @@ const StudentSubmitGithub = ({ onUpdateSubmission, githubUsername, userId, submi
         setGradleOutput('');
         setVerificationFeedback('');
         setIsSubmitting(true);
+        console.log('Submitting github url:', url);
 
         try {
             //VERIFY USER OWNERSHIP FOR GITHUB 
             try {
+                console.log('Verifying github ownership for url:', url, 'and username:', githubUsername);
                 const verifyRes = await verifyGithubOwnership(url);
                 setVerificationFeedback(verifyRes.output);
                 if (!verifyRes.success) return; //if promise is successfull but verification failed, return

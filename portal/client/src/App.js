@@ -10,6 +10,7 @@ function App() {
   
   const handleLogin=(userData)=>{
     setUser(userData); 
+    console.log('User logged in:',userData);
   };
 
   const handleLogout= async ()=>{
