@@ -235,7 +235,6 @@ function LabPreview({
             }
         });
         //CALCULATE FINAL SCORE
-        //CALCULATE FINAL SCORE
         let newFinalScorePercent;
         //console.log(newGradedResults);
         try {

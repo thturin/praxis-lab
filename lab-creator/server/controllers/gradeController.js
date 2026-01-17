@@ -4,7 +4,9 @@ const { gradeWithDeepSeek, computeFinalScore } = require('../services/gradingSer
 const prisma = new PrismaClient();
 
 
-
+//calculate final score from gradingService computerFinalScore and update session
+//called from frontend after all questions graded
+// also called from regradeSession after regrading
 const calculateScore = async (req, res) => {
     console.log('--------calculating score-----------');
     console.time('calculateScore');
@@ -30,6 +32,10 @@ const calculateScore = async (req, res) => {
         return res.status(500).json({ error: 'error calculating score' });
     }
 }
+
+//grade a single question using DeepSeek API
+//filters out empty answers and missing answer keys
+//calls gradeWithDeepseek from gradingService
 const gradeQuestionDeepSeek = async (req, res) => {
     const { userAnswer, answerKey, question, questionType, AIPrompt } = req.body;
     const hasUserAnswer = Boolean(userAnswer && userAnswer.trim().length > 0);
@@ -50,10 +56,17 @@ const gradeQuestionDeepSeek = async (req, res) => {
     }
 };
 
+//CURRENTLY NOT IMPLEMENTED
+const gradeSession = async (req, res) => {
+    // Placeholder function for grading a session 
+    //this was creating in respect to making grading a session (student facing) in a worker
+    //When the time comes to implement it, we can add the logic here
+    return res.status(501).json({ error: 'Not implemented yet' });
+}
 
 //this is called asynchronously with redis
 const regradeSession = async (req, res) => {
-    const { labId, userId, responses, questionLookup, dryRun = true, aiPrompt } = req.body;
+    const { labId, userId, responses, questionLookup, dryRun = true, aiPrompt, includeLatePenalty = false } = req.body;
     if (!labId || !userId || !responses || !questionLookup) {
         return res.status(400).json({ error: 'labId, userId, responses, questionLookup are required' });
     }
@@ -122,6 +135,7 @@ const regradeSession = async (req, res) => {
 };
 
 
+
 /// USELESS WITHOUT BETTER HARDWARE 
 const gradeQuestionOllama = async (req, res) => {
     // const ollamaHost = process.env.OLLAMA_HOST;
@@ -157,4 +171,4 @@ const gradeQuestionOllama = async (req, res) => {
 
 
 
-module.exports = { regradeSession, gradeQuestionDeepSeek, calculateScore,gradeQuestionOllama };
+module.exports = { gradeSession,regradeSession, gradeQuestionDeepSeek, calculateScore,gradeQuestionOllama };

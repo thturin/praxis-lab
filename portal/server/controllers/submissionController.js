@@ -24,8 +24,8 @@ const verifyGithubOwnership = async (req, res) => {
             });
         } // Extract username and repo from GitHub URL
 
-        //https://github.com/username/u1p1-calculator
-        const urlMatch = url.match(/github\.com\/([^\/]+)\/([^\/]+)/);
+        //https://github.com/username/u1p1-calculator or https://github.com/username/u1p1-calculator.git
+        const urlMatch = url.match(/github\.com\/([^\/]+)\/([^\/\?#]+)/);
         if (!urlMatch) {
             return res.status(400).json({
                 success: false,
@@ -34,13 +34,17 @@ const verifyGithubOwnership = async (req, res) => {
         }
 
         const urlUsername = urlMatch[1]; // e.g., 'thturin'
-        const repoName = urlMatch[2]; // e.g., 'u1p1-calculator'
+        let repoName = urlMatch[2]; // e.g., 'u1p1-calculator.git' or 'u1p1-calculator'
+
+        // Remove .git suffix if present
+        repoName = repoName.replace(/\.git$/, '');
 
         // Verify ownership by comparing GitHub usernames
         const isOwner = urlUsername.toLowerCase() === githubUsername.toLowerCase();
-        console.log(urlUsername.toLowerCase(), githubUsername.toLowerCase());
+        console.log('DEBUG verifyGithubOwnership - URL Username:', urlUsername.toLowerCase(), '| DB Username:', githubUsername.toLowerCase(), '| Repo:', repoName);
         const assignmentPrefixMatch = repoName.match(/u\d(?:[pt]\d)?/i); //case insensitive - matches u3, u1p1, u1t1
         assignmentPrefix = assignmentPrefixMatch ? assignmentPrefixMatch[0] : '';
+        console.log('DEBUG verifyGithubOwnership - Assignment Prefix extracted:', assignmentPrefix);
 
 
         return res.json({
@@ -221,7 +225,7 @@ const requestSubmissionRegradeDueDate = async (req, res) => {
 
 //WHEN USER CLICKS DRY RUN BUTTON, queue is called to regrade submissions
 const requestSubmissionRegrade = async (req, res) => {
-    const { assignmentId, dryRun, sectionId, submissionIds } = req.body;
+    const { assignmentId, dryRun, sectionId, submissionIds, showLatePenalty } = req.body;
 
     if (!assignmentId) return res.status(400).json({ error: 'assignmentId is required' });
     if (!sectionId) return res.status(400).json({ error: 'sectionId is required' });

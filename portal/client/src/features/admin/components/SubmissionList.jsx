@@ -18,7 +18,7 @@ const SubmissionList = ({
     // Sorting state
     const [sortBy, setSortBy] = useState('submittedAt');
     const [sortDir, setSortDir] = useState('desc'); // 'asc' | 'desc'
-
+  
     const toggleSort = (col) => {
         if (sortBy === col) {
             setSortDir(d => (d === 'asc' ? 'desc' : 'asc'));
@@ -239,8 +239,12 @@ const SubmissionList = ({
                 <div style={{
                     display: 'flex',
                     justifyContent: 'flex-end',
+                    alignItems: 'center',
+                    gap: '16px',
                     marginTop: '10px'
                 }}>
+                   
+
                     <button
                         onClick={async () => {
                             try {
@@ -254,7 +258,7 @@ const SubmissionList = ({
                                     )
                                 );
                                 setHasChanges(false); //no more changes
-                                //update local state map the previous submissions to the editedScores 
+                                //update local state map the previous submissions to the editedScores
                                 setSubmissions(prev => {
                                     return prev.map(submission => ({
                                         ...submission,

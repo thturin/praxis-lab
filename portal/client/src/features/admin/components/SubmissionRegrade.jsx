@@ -2,13 +2,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 
-const SubmissionRegrade = ({ assignmentId, selectedSection = null, onRegradeApplied = () => {}, submissions = [] }) => {
+const SubmissionRegrade = ({ assignmentId, selectedSection = null, onRegradeApplied = () => { }, submissions = [] }) => {
   const [status, setStatus] = useState(null);
   const [dryRunLoading, setDryRunLoading] = useState(false);
   const [applyLoading, setApplyLoading] = useState(false);
   const [dryRunSummaries, setDryRunSummaries] = useState([]);
   const [selectedSubmissions, setSelectedSubmissions] = useState([]);
   const [showSubmissionSelector, setShowSubmissionSelector] = useState(false);
+  const [showLatePenalty, setShowLatePenalty] = useState(true);
   const abortPollingRef = useRef(false); //to abort async polling if async clearQueue is clicked 
 
   const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -20,13 +21,13 @@ const SubmissionRegrade = ({ assignmentId, selectedSection = null, onRegradeAppl
   }, [assignmentId, selectedSection]);
 
   const toggleSubmissionSelection = (submissionId) => {
-    setSelectedSubmissions(prev => 
+    setSelectedSubmissions(prev =>
       prev.includes(submissionId) //if submissionId already exists in group, it is getting unselected
         ? prev.filter(id => id !== submissionId) //remove it from the array
         : [...prev, submissionId]//if it does not exist, add it to the array
     );
   };
- //if user selects all, setSelected submissions to empty, else setSelected submissions to all submission ids
+  //if user selects all, setSelected submissions to empty, else setSelected submissions to all submission ids
   const toggleSelectAll = () => {
     if (selectedSubmissions.length === submissions.length) {
       setSelectedSubmissions([]);
@@ -40,8 +41,8 @@ const SubmissionRegrade = ({ assignmentId, selectedSection = null, onRegradeAppl
     let lastState = null;
     abortPollingRef.current = false; // Reset abort flag at start
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      if(abortPollingRef.current){ //if user clicked clearQueue button, abort polling
-        console.log('Polling aborted for jobId',jobId);
+      if (abortPollingRef.current) { //if user clicked clearQueue button, abort polling
+        console.log('Polling aborted for jobId', jobId);
         return null;
       }
       try {
@@ -82,7 +83,8 @@ const SubmissionRegrade = ({ assignmentId, selectedSection = null, onRegradeAppl
         assignmentId,
         dryRun,
         sectionId: resolvedSectionId,
-        submissionIds // Add selected submission IDs
+        submissionIds, // Add selected submission IDs
+        showLatePenalty
       });
       const statusData = await pollJobStatus(res.data.jobId);
       if (!statusData) {
@@ -117,16 +119,16 @@ const SubmissionRegrade = ({ assignmentId, selectedSection = null, onRegradeAppl
     }
   };
 
-  const clearQueue = async() =>{
+  const clearQueue = async () => {
     // Abort polling immediately
     abortPollingRef.current = true;
     setDryRunLoading(false);
     setApplyLoading(false);
-    
-    try{
+
+    try {
       await axios.delete(`${process.env.REACT_APP_API_HOST}/submissions/regrade/clear-queue`);
-      setStatus('Regrade queue cleared');  
-    }catch(err){
+      setStatus('Regrade queue cleared');
+    } catch (err) {
       console.error('Clear queue error:', err);
       setStatus(`Error clearing queue: ${err.response?.data?.error || err.message}`);
     } finally {
@@ -187,8 +189,8 @@ const SubmissionRegrade = ({ assignmentId, selectedSection = null, onRegradeAppl
                   style={{ cursor: 'pointer' }}
                 />
                 <span>
-                  {sub.user?.username || `User ${sub.userId}`} - 
-                  Score: {sub.score?.toFixed(1) || '0'}% - 
+                  {sub.user?.username || `User ${sub.userId}`} -
+                  Score: {sub.score?.toFixed(1) || '0'}% -
                   Submitted: {sub.submittedAt ? new Date(sub.submittedAt).toLocaleDateString() : 'N/A'}
                 </span>
               </label>
@@ -212,8 +214,8 @@ const SubmissionRegrade = ({ assignmentId, selectedSection = null, onRegradeAppl
           color: '#fff'
         }}
       >
-        {dryRunLoading ? 'Queuing…' : selectedSubmissions.length > 0 
-          ? `Dry Regrade ${selectedSubmissions.length} Selected` 
+        {dryRunLoading ? 'Queuing…' : selectedSubmissions.length > 0
+          ? `Dry Regrade ${selectedSubmissions.length} Selected`
           : 'Dry Regrade All Submissions'}
       </button>
 
@@ -236,27 +238,42 @@ const SubmissionRegrade = ({ assignmentId, selectedSection = null, onRegradeAppl
           >
             {applyLoading ? 'Applying…' : 'Apply Regrade Updates'}
           </button>
-         
+
+          {/* LATE PENALTY CHECKBOX */}
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginLeft: '12px' }}>
+            <input
+              type="checkbox"
+              id="showLatePenalty"
+              checked={showLatePenalty}
+              onChange={(e) => setShowLatePenalty(e.target.checked)}
+              style={{ transform: 'scale(1.3)', cursor: 'pointer' }}
+            />
+            <label htmlFor="showLatePenalty" style={{ fontSize: '14px', cursor: 'pointer' }}>
+              Include late penalty
+            </label>
+          </div>
+
+
         </>
       )}
 
-       <button
-            onClick={clearQueue}
-            disabled={applyLoading}
-            style={{
-              marginLeft: '12px',
-              padding: '10px 16px',
-              borderRadius: '6px',
-              fontWeight: '600',
-              border: 'none',
-              cursor: applyLoading ? 'not-allowed' : 'pointer',
-              opacity: applyLoading ? 0.6 : 1,
-              backgroundColor: '#dc2626',
-              color: '#fff'
-            }}
-          >
-            Clear Results
-          </button>
+      <button
+        onClick={clearQueue}
+        disabled={applyLoading}
+        style={{
+          marginLeft: '12px',
+          padding: '10px 16px',
+          borderRadius: '6px',
+          fontWeight: '600',
+          border: 'none',
+          cursor: applyLoading ? 'not-allowed' : 'pointer',
+          opacity: applyLoading ? 0.6 : 1,
+          backgroundColor: '#dc2626',
+          color: '#fff'
+        }}
+      >
+        Clear Results
+      </button>
 
       {status && <p style={{ marginTop: '0.5rem' }}>{status}</p>}
       {dryRunSummaries.length > 0 && (

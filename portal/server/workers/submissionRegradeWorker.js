@@ -34,10 +34,8 @@ workerDueDate.on('failed', (job, err) => console.error('Submission regrade faile
 //redis BullMQ has no http involved (no requests or responses)
 //controllers respond to API calls, workers handle background tasks.
 
-// Removed unused buildFinalScore helper
-
 const worker = new Worker('submission-regrade', async job => {
-    const { dryRun, assignmentId, sectionId, submissionIds } = job.data;
+    const { dryRun, assignmentId, sectionId, submissionIds, showLatePenalty } = job.data;
     //we are sending a list of submission id's to regrade, or null for all submissions in the assignment/section
     const dryRunSummaries = [];
 
@@ -54,6 +52,8 @@ const worker = new Worker('submission-regrade', async job => {
         };
 
         // If specific submissions selected, filter by IDs, else process all submissions
+        // SELECT * FROM Submission 
+        // WHERE id IN (1, 5, 10, 23)
         if (submissionIds && submissionIds.length > 0) {
             whereClause.id = { in: submissionIds.map(id => Number(id)) };
         }
@@ -158,6 +158,7 @@ const worker = new Worker('submission-regrade', async job => {
                 }
 
                 // Regrade via lab API GRADECONTROLLER
+                //regradeSession in gradeController.js
                 const regradeResponse = await axios.post(`${process.env.LAB_CREATOR_API_URL}/grade/regrade`, {
                     responses: session.responses,
                     questionLookup,
@@ -187,7 +188,7 @@ const worker = new Worker('submission-regrade', async job => {
                         where: { id: submission.id },
                         data: {
                             rawScore,
-                            score: calculateLateScore(submission.submittedAt, assignment.dueDate, rawScore)
+                            score: showLatePenalty ? calculateLateScore(submission.submittedAt, assignment.dueDate, rawScore) : rawScore
                         }
                     });
                 }
@@ -196,15 +197,10 @@ const worker = new Worker('submission-regrade', async job => {
                     await new Promise(resolve => setTimeout(resolve, 2**i));
                 }
             }
-
-            
-
         } catch (err) {
             console.error('Error processing submission', submission.id, err.message);
             // Continue to next submission instead of stopping
         }
-
-
     }
 
     // Update progress to 100% when done

@@ -1,5 +1,7 @@
 const axios = require('axios');
 
+
+//enforce json response from deepseek api called in gradeWithDeepSeek
 const parseScoreFeedback = (raw) => { //enforce json return from deepseek
   try {
     const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
@@ -30,12 +32,14 @@ const buildPrompt = ({ userAnswer, answerKey, question, questionType, AIPrompt }
             Compare the student answer to the answer key, look for misconceptions, 
             and explain how to correct them. Mention the specific concept they misunderstood, 
             point toward the right reasoning, and suggest one next step (e.g., revisit a definition or example).
-            Be kind, concise, and avoid grammar penalties. Feedback should be ≤400 characters.
+            Be kind, concise, and avoid grammar penalties. Feedback should be ≤500 characters.
             The response will be be in html but ignore all html artifacts and just analyze the text.
             Is the student's answer correct, give a score from 0 to 1 and a brief feedback.
             If the response is empty, just respond with 'response is empty' `;
 };
 
+
+//Gets called in gradeController.js /deepseek api gradeQuestionDeepSeek and regradeSession
 const gradeWithDeepSeek = async ({ userAnswer, answerKey, question, questionType, AIPrompt, timeoutMs = 20000 }) => {
   if (!process.env.DEEPSEEK_API_KEY) {
     throw new Error('DEEPSEEK_API_KEY is not configured');
@@ -67,6 +71,7 @@ const gradeWithDeepSeek = async ({ userAnswer, answerKey, question, questionType
   );
 
   const raw = response.data?.choices?.[0]?.message?.content || '';
+  //return { score: 0, feedback: 'Model response malformed or empty' };
   return parseScoreFeedback(raw);
 };
 

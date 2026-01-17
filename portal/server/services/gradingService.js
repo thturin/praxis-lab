@@ -46,17 +46,17 @@ async function gradeJavaSubmission(clonePath){
                 console.log('Test results directory does not exist:', testResultsDir);
                 }
 
-                //if you want to print the error message uncomment below
-                //console.error(err.message);
-                //console.error('stderr:', stderr);
+              //  if you want to print the error message uncomment below
+                console.error(err.message);
+                console.error('stderr:', stderr);
                 
-                // // Check if it's a build failure vs system error
-                // if (stderr.includes('BUILD FAILED') || stderr.includes('test')) {
-                //     console.log('----Build failed, checking for partial results...----');
-                //     // Try to parse results even if build failed
-                // }else{
-                //     console.log('----System error occurred----');
-                // }
+                // Check if it's a build failure vs system error
+                if (stderr.includes('BUILD FAILED') || stderr.includes('test')) {
+                    console.log('----Build failed, checking for partial results...----');
+                    // Try to parse results even if build failed
+                }else{
+                    console.log('----System error occurred----');
+                }
  
             }else{
                 console.log('----Gradle succeeded - all tests passed-----');
