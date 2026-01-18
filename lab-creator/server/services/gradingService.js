@@ -1,5 +1,5 @@
 const axios = require('axios');
-
+const { compileAndRunJavaWithTests } = require('./dockerExecutionService')
 
 //enforce json response from deepseek api called in gradeWithDeepSeek
 const parseScoreFeedback = (raw) => { //enforce json return from deepseek
@@ -17,6 +17,135 @@ const parseScoreFeedback = (raw) => { //enforce json return from deepseek
 
   return { score: 0, feedback: 'Model response malformed or empty' };
 };
+
+
+const generateJUnitTests = async ({ problemDescription, answerKey }) => {
+  // Generate JUnit test code based on problem description and examples
+
+  const prompt = `You are a Java testing expert. Create JUnit 5 test code for this programming problem:
+
+            Problem Description:
+              ${problemDescription}
+
+              Answer Key:
+              ${answerKey}
+
+              Requirements:
+              1. Create a complete JUnit 5 test class named "SolutionTest"
+              2. Assume the student's class is named "Solution" with appropriate methods
+              3. If there are test cases, they will included in problem description or answerKey. If 
+              there are n test cases provided, create test cases that test all scenarios and edge cases.
+              4. Use assertions from org.junit.jupiter.api.Assertions
+              5. Return ONLY the Java code - no markdown, no explanations
+
+              Test class template:
+              import org.junit.jupiter.api.Test;
+              import static org.junit.jupiter.api.Assertions.*;
+
+              public class SolutionTest {
+                  @Test
+                  public void testExample1() {
+                      Solution solution = new Solution();
+                      // Add test logic
+                  }
+              }`;
+
+  const response = await axios.post('https://api.deepseek.com/chat/completions', {
+    model: 'deepseek-chat',
+    messages: [
+      { role: 'system', content: 'You are a Java testing expert. Generate only valid Java code.' },
+      { role: 'user', content: prompt }
+    ],
+    temperature: 0.2,
+    max_tokens: 1500
+  }, {
+    headers: { Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}` },
+    timeout: 30000
+  });
+
+  const testCode = response.data?.choices?.[0]?.message?.content || '';
+  const cleanedTestCode = testCode.replace(/```java|```/g, '').trim(); // Remove markdown if present
+  return cleanedTestCode;
+};
+
+const analyzeStudentCode = async ({ problemDescription, studentCode, testResults, testOutput }) => {
+  // Analyze student code against test code to provide feedback
+  const prompt = `Grade this Java programming submission:
+
+            Problem: ${problemDescription}
+
+            Student Code:
+            ${studentCode.substring(0, 2000)}
+
+            Test Results:
+            - Total Tests: ${testResults.total}
+            - Passed: ${testResults.passed}
+            - Failed: ${testResults.failed}
+
+            Test Output:
+            ${testOutput.substring(0, 1000)}
+
+            Provide:
+            1. Overall score (0-1) - award partial credit for partially correct solutions
+            2. Constructive feedback on what worked and what didn't
+            3. Specific suggestions for improvement
+            4. Wrap feedback and suggestion in the same key "feedback"
+
+            Respond with JSON: { "score": number, "feedback": string }`;
+
+
+  const response = await axios.post('https://api.deepseek.com/chat/completions', {
+      model: 'deepseek-chat',
+      messages: [
+        { role: 'system', content: 'You are an empathetic Java instructor. Respond only with JSON.' },
+        { role: 'user', content: prompt }
+      ],
+      response_format: { type: 'json_object' },
+      temperature: 0.3,
+      max_tokens: 600
+    }, {
+      headers: { Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}` },
+      timeout: 20000
+    });
+
+  return JSON.parse(response.data.choices[0].message.content);
+
+};
+
+const gradeJavaCode = async ({ studentCode, problemDescription, answerKey }) => {
+  try {
+    //1. ask deepseek to generate junit tests
+    console.log('Generating JUnit tests via DeepSeek...');
+    const testCode = await generateJUnitTests({ problemDescription, answerKey });
+    console.log('Generated JUnit tests:');
+    console.log(testCode);
+
+    //2. execute student code against generated tests in docker sandbox
+    console.log('Running code in Docker sandbox...');
+    const executionResult = await compileAndRunJavaWithTests({ studentCode, testCode, timeout: 60000 });
+    console.log('Execution result:', executionResult);
+
+    //3. parse test Results for feedback and suggestions and score 
+    const gradingResults = analyzeStudentCode({
+      problemDescription,
+      studentCode,
+      testResults: executionResult.testResults,
+      testOutput: executionResult.stdout
+    });
+
+    return {
+      gradingResults: parseScoreFeedback(JSON.stringify(gradingResults)),//{ score, feedback }
+      testResults: executionResult.testResults, //testResults from junit/maven
+      generatedTests: testCode // junit test code generated
+    };
+
+
+  } catch (err) {
+    console.error('Error in GradeJavaCode', err.message);
+    throw new Error('Failed to grade Java code');
+  }
+}
+
 
 const buildPrompt = ({ userAnswer, answerKey, question, questionType, AIPrompt }) => {
   const basePrompt = AIPrompt || '';
@@ -38,7 +167,6 @@ const buildPrompt = ({ userAnswer, answerKey, question, questionType, AIPrompt }
             If the response is empty, just respond with 'response is empty' `;
 };
 
-
 //Gets called in gradeController.js /deepseek api gradeQuestionDeepSeek and regradeSession
 const gradeWithDeepSeek = async ({ userAnswer, answerKey, question, questionType, AIPrompt, timeoutMs = 20000 }) => {
   if (!process.env.DEEPSEEK_API_KEY) {
@@ -59,7 +187,7 @@ const gradeWithDeepSeek = async ({ userAnswer, answerKey, question, questionType
         type: 'json_object',
       },
       temperature: 0.2,
-      max_tokens: 200,
+      max_tokens: 350,
     },
     {
       headers: {
@@ -75,6 +203,9 @@ const gradeWithDeepSeek = async ({ userAnswer, answerKey, question, questionType
   return parseScoreFeedback(raw);
 };
 
+
+// Computes final score from graded results 
+//this is used in gradeController.js regradeSession redis 
 const computeFinalScore = (gradedResults) => {
   const maxPoints = Object.keys(gradedResults || {}).length;
   const awardedPoints = Object.values(gradedResults || {}).reduce((sum, result) => sum + (result?.score || 0), 0);
@@ -86,4 +217,4 @@ const computeFinalScore = (gradedResults) => {
   };
 };
 
-module.exports = { parseScoreFeedback, buildPrompt, gradeWithDeepSeek, computeFinalScore };
+module.exports = { parseScoreFeedback, buildPrompt, gradeWithDeepSeek, computeFinalScore, generateJUnitTests };
