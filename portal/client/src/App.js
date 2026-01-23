@@ -10,7 +10,6 @@ function App() {
   
   const handleLogin=(userData)=>{
     setUser(userData); 
-    console.log('User logged in:',userData);
   };
 
   const handleLogout= async ()=>{
@@ -24,7 +23,7 @@ function App() {
   useEffect(()=>{ //everytime the user changes, useEffect() is called
     // console.log('All env vars:', process.env);
     if(user){
-      console.log('current user is ',user.name);
+      console.log('current user is ',user.username);
     }else{
       console.log('User is null');
     }

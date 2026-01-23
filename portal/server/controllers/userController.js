@@ -108,6 +108,7 @@ const loginUser = async (req, res) => {
                     sectionId: user.sectionId
                 };
             }
+            //console.log(req.session.user);
             return res.json({user});
         } else {
             return res.status(401).json({error: 'Invalid username or password'});

@@ -32,6 +32,7 @@ const LoginBar = ({onLogin}) =>{
                 const res = await axios.post(process.env.REACT_APP_API_HOST+'/login', { userName, password});
                 if(res.data && res.data.user){
                     //basic login 
+                    //console.log('onLogin called with:', res.data.user.name);
                     onLogin(res.data.user);
                     //setUserName(res.data.user.name);
                     setSuccess(true);

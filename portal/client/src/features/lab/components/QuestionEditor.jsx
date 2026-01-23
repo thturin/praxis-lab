@@ -160,7 +160,7 @@ function QuestionEditor({ q, onQuestionChange, onQuestionDelete, level = 0 }) {
                     >
                         <option value="short">Short Answer</option>
                         <option value="textarea">Paragraph</option>
-                        <option value="code">Code Response</option>
+                        <option value="code">Java</option>
                     </select>
                     {/* ADD SUB QUESTION BUTTON */}
 

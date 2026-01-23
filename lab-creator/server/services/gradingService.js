@@ -48,7 +48,12 @@ const generateJUnitTests = async ({ problemDescription, answerKey }) => {
                       Solution solution = new Solution();
                       // Add test logic
                   }
-              }`;
+              }
+              IMPORTANT: The student code will always be renamed to class "Solution" before execution. 
+              You MUST use "new Solution(...)" for all object instantiation, even if the answer key 
+              shows a different class name like "Student" or "Calculator".
+    
+              `;
 
   const response = await axios.post('https://api.deepseek.com/chat/completions', {
     model: 'deepseek-chat',
@@ -64,16 +69,32 @@ const generateJUnitTests = async ({ problemDescription, answerKey }) => {
   });
 
   const testCode = response.data?.choices?.[0]?.message?.content || '';
-  const cleanedTestCode = testCode.replace(/```java|```/g, '').trim(); // Remove markdown if present
+  let cleanedTestCode = testCode.replace(/```java|```/g, '').trim(); // Remove markdown if present
+
+  /// WHEN WE RUN THE TESTS IN DOCKER SANDBOX, THE STUDENT CODE IS RENAMED TO "SOLUTION" 
+  //THE GENERATED TESTS MUST INSTANTIATE "SOLUTION" INSTEAD OF THE ORIGINAL CLASS NAME
+  //POST PROCESS: replace original class name with "Solution"
+  // Extract class name from answerKey (e.g., "public class ActivityTracker")
+  const classNameMatch = answerKey.match(/public\s+class\s+(\w+)/);
+  if (classNameMatch && classNameMatch[1] !== 'Solution') { 
+    const originalClassName = classNameMatch[1];
+    cleanedTestCode = cleanedTestCode.replace(new RegExp(originalClassName, 'g'), 'Solution');
+    console.log(`Replaced class name "${originalClassName}" with "Solution" in generated tests`);
+  }
+
   return cleanedTestCode;
 };
 
 const analyzeStudentCode = async ({ problemDescription, studentCode, testResults, testOutput }) => {
   // Analyze student code against test code to provide feedback
+  
   const prompt = `Grade this Java programming submission:
 
             Problem: ${problemDescription}
-
+            
+            The student's class and constructor name is "Solution" because the 
+            code was renamed for grading purposes.
+  
             Student Code:
             ${studentCode.substring(0, 2000)}
 
@@ -92,6 +113,7 @@ const analyzeStudentCode = async ({ problemDescription, studentCode, testResults
             4. Wrap feedback and suggestion in the same key "feedback"
 
             Respond with JSON: { "score": number, "feedback": string }`;
+            console.log('PROMPT',prompt);
 
 
   const response = await axios.post('https://api.deepseek.com/chat/completions', {
@@ -117,21 +139,24 @@ const gradeJavaCode = async ({ studentCode, problemDescription, answerKey }) => 
     //1. ask deepseek to generate junit tests
     console.log('Generating JUnit tests via DeepSeek...');
     const testCode = await generateJUnitTests({ problemDescription, answerKey });
-    console.log('Generated JUnit tests:');
-    console.log(testCode);
+    // console.log('Generated JUnit tests:');
+    // console.log(testCode);
 
     //2. execute student code against generated tests in docker sandbox
     console.log('Running code in Docker sandbox...');
     const executionResult = await compileAndRunJavaWithTests({ studentCode, testCode, timeout: 60000 });
-    console.log('Execution result:', executionResult);
+    //console.log('Execution result:', executionResult);
 
     //3. parse test Results for feedback and suggestions and score 
-    const gradingResults = analyzeStudentCode({
+    console.log('Analyzing student code and test results for grading...');
+    const gradingResults = await analyzeStudentCode({
       problemDescription,
       studentCode,
       testResults: executionResult.testResults,
       testOutput: executionResult.stdout
     });
+
+    //console.log('Grading results:', gradingResults);
 
     return {
       gradingResults: parseScoreFeedback(JSON.stringify(gradingResults)),//{ score, feedback }
@@ -145,7 +170,6 @@ const gradeJavaCode = async ({ studentCode, problemDescription, answerKey }) => 
     throw new Error('Failed to grade Java code');
   }
 }
-
 
 const buildPrompt = ({ userAnswer, answerKey, question, questionType, AIPrompt }) => {
   const basePrompt = AIPrompt || '';
@@ -203,7 +227,6 @@ const gradeWithDeepSeek = async ({ userAnswer, answerKey, question, questionType
   return parseScoreFeedback(raw);
 };
 
-
 // Computes final score from graded results 
 //this is used in gradeController.js regradeSession redis 
 const computeFinalScore = (gradedResults) => {
@@ -217,4 +240,5 @@ const computeFinalScore = (gradedResults) => {
   };
 };
 
-module.exports = { parseScoreFeedback, buildPrompt, gradeWithDeepSeek, computeFinalScore, generateJUnitTests };
+module.exports = { gradeJavaCode,parseScoreFeedback, buildPrompt, gradeWithDeepSeek, computeFinalScore, generateJUnitTests };
+

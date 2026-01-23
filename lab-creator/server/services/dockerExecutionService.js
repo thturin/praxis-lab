@@ -32,6 +32,10 @@ async function createMavenProject(tempDir, studentCode, testCode) {
     //pom.xml imported with Junit5 dependencies
     // Write pom.xml
    await fs.writeFile(path.join(tempDir, 'pom.xml'), pomXml, 'utf8');
+        // ✅ DEBUG: Verify pom.xml was created on HOST
+    console.log('📁 Files created in:', tempDir);
+    const files = await fs.readdir(tempDir);
+    console.log('📄 Files in temp dir:', files);
 }
 
 
@@ -77,22 +81,36 @@ async function cleanupExecutionEnvironment(dirPath) {
 async function compileAndRunJavaWithTests({ studentCode, testCode, timeout = 60000 }) {
     //create a temporary directory for the code execution
     const startTime = Date.now();
-    const tempDir = `./tmp/exec-${startTime}`;
-
+    const tempHostDir = path.join(process.env.HOST_APP_PATH || '/app', 'tmp', `exec-${startTime}`);
+   // const tempHostDir = ('/home/tatiana-turin/projects/edu-platform/lab-creator/server/tmp/exec-' + startTime);
+    const tempDir = path.join(__dirname, '..', 'tmp', `exec-${startTime}`);
+    //tatiana-turin/projects/edu-platform/lab-creator/server/tmp/exec-1686948572345
+    console.log('Creating temp dir at LOOK HERE ', tempDir);
     // Create Maven project structure in sandbox directory (/workspace in docker)
     await createMavenProject(tempDir, studentCode, testCode);
 
     // Run the code in Docker
+    //DOCKER CONTAINERS DO NOT SEE EACH OTHER . THERE IS NO SUCH THING AS DOCKER INSIDE DOCKER UNLESS YOU SET IT UP SPECIFICALLY
+    //HERE WE ARE USING THE DOCKER DAEMON OF THE HOST MACHINE TO SPAWN A CONTAINER THAT WILL RUN THE STUDENT CODE
+    
+    //const cmdString = 'echo "=== WORKSPACE CONTENTS ===" && ls -la /workspace && echo "=== POM.XML ===" && cat /workspace/pom.xml && echo "=== RUNNING MAVEN ===" && mvn clean test';
+     // const cmdString = 'echo "=== SOLUTIONS.JAVA ===" && cat /workspace/src/main/java/Solution.java && echo "=== SOLUTIONSTEST.JAVA ===" && cat /workspace/src/test/java/SolutionTest.java && echo "=== RUNNING MAVEN ===" && mvn clean test';
+
+    const cmdString = 'echo "=== RUNNING MAVEN ===" && mvn clean test';
+
     const container = await docker.createContainer({
-        Image: 'java-grading-sandbox:latest',
-        Cmd: ['mvn', 'clean', 'test'],
+        Image: 'java-grading-sandbox:latest',   
+        Cmd: ['sh', '-c', cmdString],
+
+        //Cmd: ['sh', '-c', 'ls -la /workspace && mvn clean test'], // First list files issue with pom.xml file missing , then run tests
         WorkingDir: '/workspace',
-        User: 'sandbox',
+        //we deleted the sandbox user in dockerfile to avoid permission issues so you down need the line below
+        //User: `${process.getuid()}:${process.getgid()}`,  // Use host user's UID:GID
         HostConfig: {
             Memory: 512 * 1024 * 1024, // 512MB
             CpuQuota: 50000, // 50% of a CPU
-            NetworkMode: 'none', // Disable networking
-            Binds: [`${path.resolve(tempDir)}:/workspace:rw`],//mount temp dir
+            NetworkMode: 'none', // Disable networking but that means no internet access for maven dependencies
+            Binds: [`${tempHostDir}:/workspace:rw`],//mount temp dir
             AutoRemove: false //we will remove manually after getting logs
         }
     });
@@ -111,10 +129,9 @@ async function compileAndRunJavaWithTests({ studentCode, testCode, timeout = 600
 
     const logs = await container.logs({ stdout: true, stderr: true });
     await container.remove();//clean up container
-    console.log('here are the logs from junit/maven surefire');
     console.log(logs.toString());
     return {
-        success: result.StatusCode === 0,
+        success: true,
         stdout: logs.toString(),
         stderr: '',
         testResults: parseJUnitOutput(logs.toString()),

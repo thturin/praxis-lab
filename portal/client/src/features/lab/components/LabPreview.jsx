@@ -65,14 +65,14 @@ function LabPreview({
         }));
     }
 
-    const handleScoreOverride = ({gradedResults, finalScore}) => { //desctructure {} insTEAD OF (DATA)
-        setSession(prev=>({
+    const handleScoreOverride = ({ gradedResults, finalScore }) => { //desctructure {} insTEAD OF (DATA)
+        setSession(prev => ({
             ...prev,
             gradedResults,
             finalScore
         }));
 
-        if(onUpdateSubmission){
+        if (onUpdateSubmission) {
             onUpdateSubmission(finalScore.percent);
         }
     };
@@ -140,6 +140,7 @@ function LabPreview({
 
     // AUTO SAVE SESSION - save 
     useEffect(() => { //useeffect cannot be async
+        console.log('Auto-saving session...');
         saveSession();
         const timeoutId = setTimeout(saveSession, 1000); //add 1 second delay 
         return () => clearTimeout(timeoutId);
@@ -198,25 +199,44 @@ function LabPreview({
                 continue;
             }
 
-            //DEEPSEEK API REQUEST
+            //DEEPSEEK API REQUEST for non Java coding questions
             try {
-                const response = await axios.post(`${process.env.REACT_APP_API_LAB_HOST}/grade/deepseek`, {
-                    userAnswer,
-                    answerKey,
-                    question,
-                    questionType: type,
-                    AIPrompt: aiPrompt
-                });
+                let response;
 
+                if (type === 'code') { //JAVA CODE GRADING 
+                    response = await axios.post(`${process.env.REACT_APP_API_LAB_HOST}/grade/java`, {
+                        userAnswer,
+                        answerKey,
+                        question
+                    });
 
-                //UPDATED GRADEDRESULTS for session 
-                newGradedResults = {
-                    ...newGradedResults,
-                    [questionId]: { //add or update current gradedResult with questionId
-                        score: response.data.score,
-                        feedback: response.data.feedback
+                    newGradedResults = {
+                        ...newGradedResults,
+                        [questionId]: { //add or update current gradedResult with questionId
+                            score: response.data.gradingResults.score,
+                            feedback: response.data.gradingResults.feedback,
+                            testResults: response.data.testResults,
+                            generatedTests: response.data.generatedTests
+                        }
+                    }
+                } else {
+                    response = await axios.post(`${process.env.REACT_APP_API_LAB_HOST}/grade/deepseek`, {
+                        userAnswer,
+                        answerKey,
+                        question,
+                        questionType: type,
+                        AIPrompt: aiPrompt
+                    });
+                    //UPDATED GRADEDRESULTS for session 
+                    newGradedResults = {
+                        ...newGradedResults,
+                        [questionId]: { //add or update current gradedResult with questionId
+                            score: response.data.score,
+                            feedback: response.data.feedback
+                        }
                     }
                 }
+
                 console.log('updating graded results', newGradedResults);
             } catch (err) {
                 console.error("Error grading in LabPreview [LabPreview.jsx]", err.message);
@@ -326,10 +346,10 @@ function LabPreview({
                         className="bg-slate-700 text-white px-4 py-2 rounded mt-4 mr-3"
                         type="button"
                     >
-                    Export Session JSON
+                        Export Session JSON
                     </button>
                 )}
-                        
+
 
                 {/* //read only is for admin viewing in submission list */}
                 {!readOnly && (

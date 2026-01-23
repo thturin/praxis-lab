@@ -1,4 +1,6 @@
 
+#this override file is for development purposes only
+#it sets services to restart unless-stopped and enables nodemon for api services
 services:
   redis:
     restart: unless-stopped

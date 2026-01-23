@@ -91,3 +91,15 @@ Cleanup	❌ Manual file cleanup needed	✅ Auto-cleanup on destroy
 Complexity	❌ Need sandbox API + queue	✅ Simple: create, run, destroy
 Concurrency	❌ Complex to manage	✅ Natural parallelism
 State	❌ Stateful, risk of bugs	✅ Stateless, predictable
+
+
+DYNAMIC CONTAINER FILE STRUCTURE 
+/workspace/                          ← Container's working directory
+├── pom.xml                          ← Maven config (from pomXmlFile.js)
+├── src/
+│   ├── main/
+│   │   └── java/
+│   │       └── Solution.java        ← Student's submitted code
+│   └── test/
+│       └── java/
+│           └── SolutionTest.java    ← AI-generated JUnit tests

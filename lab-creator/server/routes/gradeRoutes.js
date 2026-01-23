@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { gradeSession,regradeSession,gradeQuestionDeepSeek,calculateScore,gradeQuestionOllama } = require('../controllers/gradeController');
+const {gradeJavaCodeDeepSeek, gradeSession,regradeSession,gradeQuestionDeepSeek,calculateScore,gradeQuestionOllama } = require('../controllers/gradeController');
 
 
 //ROOT localhost:4000/api/grade
 router.post('/deepseek', gradeQuestionDeepSeek);
+router.post('/java', gradeJavaCodeDeepSeek);
 router.post('/ollama', gradeQuestionOllama);
 router.post('/calculate-score',calculateScore);
 router.post('/regrade',regradeSession);

@@ -101,7 +101,7 @@ services:
     container_name: lab-creator-api
     ports:
       - "14000:4000"
-      - "5556:5555"
+      - "5556:5555" #for npx prisma studio
     environment:
       DATABASE_URL: ${LABCREATOR_DATABASE_URL}
       PORTAL_DATABASE_URL: ${PORTAL_DATABASE_URL}
@@ -109,10 +109,13 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
       NODE_ENV: ${NODE_ENV}
+      HOST_APP_PATH: ${HOST_APP_PATH}
     depends_on:
       - lab-creator-db
     volumes:
-      - ./lab-creator/server:/app
+      - ./lab-creator/server:/app #the whole server code
+      - /var/run/docker.sock:/var/run/docker.sock  # Enable this container to have access
+      #to the host's Docker daemon to run grading containers
     #  - lab-creator-api-node-modules:/app/node_modules
    # command: npx nodemon app.js
     networks:

@@ -60,6 +60,7 @@ console.log('proces.env.NODE_ENV',process.env.NODE_ENV);
 console.log('process.env.REDIS_URL',process.env.REDIS_URL);
 
 // Configure session store based on environment
+//in Production, we store the session with redis
 if (process.env.NODE_ENV === 'production') {
     const { createSessionStore } = require('./config/sessionRedis');
     sessionOptions.store = createSessionStore(session);

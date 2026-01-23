@@ -1,6 +1,7 @@
 require('dotenv').config();
 const { PrismaClient } = require('@prisma/client');
-const { gradeWithDeepSeek, computeFinalScore } = require('../services/gradingService');
+const { gradeWithDeepSeek, computeFinalScore, gradeJavaCode} = require('../services/gradingService');
+const {parseCodeFromHtml} = require('../services/parseHtml');
 const prisma = new PrismaClient();
 
 
@@ -31,7 +32,7 @@ const calculateScore = async (req, res) => {
         console.error('Error in calculateScore', err);
         return res.status(500).json({ error: 'error calculating score' });
     }
-}
+};
 
 //grade a single question using DeepSeek API
 //filters out empty answers and missing answer keys
@@ -53,6 +54,22 @@ const gradeQuestionDeepSeek = async (req, res) => {
     } catch (err) {
         console.log('Error in accessing deep seek api. Request failed.', err.message);
         return res.status(400).json({ error: 'cannot access deep seek api' });
+    }
+};
+
+const gradeJavaCodeDeepSeek = async (req, res) => {
+    const { userAnswer, answerKey, question } = req.body;
+    const parsedUserAnswer = parseCodeFromHtml(userAnswer);
+    try{
+        const result = await gradeJavaCode({ studentCode: parsedUserAnswer, problemDescription: question, answerKey });
+        res.json(result);
+    }catch(err){
+        console.error('Error in gradeJavaCode controller', err.message);
+        return res.status(500).json({ 
+            error: 'Failed to grade Java code',
+            score:0,
+            feedback:'An error occurred while grading the code. Please try again later.'
+         });
     }
 };
 
@@ -171,4 +188,4 @@ const gradeQuestionOllama = async (req, res) => {
 
 
 
-module.exports = { gradeSession,regradeSession, gradeQuestionDeepSeek, calculateScore,gradeQuestionOllama };
+module.exports = { gradeJavaCodeDeepSeek,gradeSession,regradeSession, gradeQuestionDeepSeek, calculateScore,gradeQuestionOllama };
