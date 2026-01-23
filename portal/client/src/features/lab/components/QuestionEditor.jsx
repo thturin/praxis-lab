@@ -3,12 +3,15 @@ import { createQuestion } from "../models/block";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import { getImageUrlsFromHtml } from './fetchImages';
+import { set } from "date-fns";
 
 
 function QuestionEditor({ q, onQuestionChange, onQuestionDelete, level = 0 }) {
     const [showAnswerKey, setShowAnswerKey] = useState(false);
     const [showExplanation, setShowExplanation] = useState(false);
+    const [showJavaGenerateTestCodeExpansion, setShowJavaGenerateTestCodeExpansion] = useState(false);
     const [isExpanded, setIsExpanded] = useState(true);
+    const showJavaGenerateTestCode = q.type === 'code';
     //onChange passed down from the parent so everything stays in sync
     //INFINITE LOOP OCCURRING EVERY KEYSTROKE TRIGGERS ONCHANGE
     //DO NOT UPDATE IF VALUE HASN'T CHANGED
@@ -19,7 +22,6 @@ function QuestionEditor({ q, onQuestionChange, onQuestionDelete, level = 0 }) {
             //properties of questionBlock blockType, type, prompt, desc
         }
     };
-
 
     const modules = {
         toolbar: [
@@ -119,6 +121,41 @@ function QuestionEditor({ q, onQuestionChange, onQuestionDelete, level = 0 }) {
                                         </div>
                                     )}
                                 </div>
+
+                                {/* Java Test Code Generator - Only show for code type questions */}
+                                {showJavaGenerateTestCode && (
+                                    <div className="mb-2 border border-purple-200 bg-purple-50 rounded-md overflow-hidden">
+                                        <div
+                                            onClick={() => setShowJavaGenerateTestCodeExpansion(!showJavaGenerateTestCodeExpansion)}
+                                            className="px-3 py-2 cursor-pointer hover:bg-purple-100 transition-colors flex items-center justify-between"
+                                        >
+                                            <span className="font-semibold text-sm text-purple-800">Generated Test Code</span>
+                                            <span className="text-purple-600 text-xs">
+                                                {showJavaGenerateTestCodeExpansion ? '▼' : '▶'}
+                                            </span>
+                                        </div>
+                                        {showJavaGenerateTestCodeExpansion && (
+                                            <div className="px-2 pb-2">
+                                                <button
+                                                    onClick={() => {
+                                                        // TODO: Call API to generate test code
+                                                        console.log('Generate test code clicked');
+                                                    }}
+                                                    className="bg-purple-600 text-white px-4 py-2 rounded mb-2 w-full hover:bg-purple-700"
+                                                >
+                                                    Generate Java Test Code
+                                                </button>
+                                                <textarea
+                                                    placeholder="Generated test code will appear here..."
+                                                    className="w-full border p-2 font-mono text-sm"
+                                                    value={q.generatedTestCode || ""}
+                                                    onChange={(e) => update("generatedTestCode", e.target.value)}
+                                                    rows={10}
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         )}
 
@@ -156,7 +193,9 @@ function QuestionEditor({ q, onQuestionChange, onQuestionDelete, level = 0 }) {
                     <select
                         className="border p-2"
                         value={q.type}
-                        onChange={(e) => update("type", e.target.value)}
+                        onChange={(e) => {
+                            //show button to generate test code only if type is code
+                            return update("type", e.target.value)}}
                     >
                         <option value="short">Short Answer</option>
                         <option value="textarea">Paragraph</option>

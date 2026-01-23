@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { useEffect, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import Navbar from '../../../shared/Navbar';
 import AdminAssignmentMenu from '../components/AdminAssignmentMenu';
 import SubmissionList from '../components/SubmissionList';
@@ -30,10 +30,11 @@ const AdminDashboard = ({ user, onLogout }) => {
     const [selectedSubmissionId, setSelectedSubmissionId] = useState(null);
     const [labRefreshKey, setLabRefreshKey] = useState(0);
 
-    useEffect(()=>{
-        console.log('hello labrefresh key');
-    },[labRefreshKey,setLabRefreshKey]);
+    // useEffect(()=>{
+    //     console.log('hello labrefresh key');
+    // },[labRefreshKey,setLabRefreshKey]);
 
+ 
     const selectedSubmission = submissions.find(
         sub => sub.id === Number(selectedSubmissionId)
     );

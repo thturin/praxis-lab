@@ -1,5 +1,5 @@
 import axios from "axios";
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, use } from 'react';
 import { createSession } from '../models/session';
 import MaterialBlock from './MaterialBlock';
 import QuestionBlock from './QuestionBlock';
@@ -27,7 +27,7 @@ function LabPreview({
 }) {
 
     const isAdmin = mode === 'admin';
-
+ 
     const [session, setSession] = useState(createSession(title, username, userId, labId));
     const [sessionLoaded, setSessionLoaded] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -59,6 +59,7 @@ function LabPreview({
 
     //update handler that modifies responses in session
     const handleResponseChange = (questionId, value) => {
+        console.log('Response changed for questionId', questionId, 'to', value);
         setSession(prev => ({ //update the session and concatenate old data with new response for questionId an val
             ...prev,
             responses: { ...prev.responses, [questionId]: value }
@@ -105,6 +106,7 @@ function LabPreview({
 
     const loadSession = useCallback(async () => {
         try {
+            console.log('Loading session for labId', labId, 'userId', userId, 'username', username);
             const response = await axios.get(`${process.env.REACT_APP_API_LAB_HOST}/session/load-session/${labId}`, {
                 params: { userId, username, title }
             });
@@ -117,8 +119,12 @@ function LabPreview({
         }
     }, [labId, userId, username, title]);
 
+
+
+
     const saveSession = useCallback(async () => {
-        if (!session || !title || !userId || !labId || !sessionLoaded) return;
+        //if (!session || !title || !userId || !labId || !sessionLoaded) return;
+        console.log('save session...');
         try {
             await axios.post(`${process.env.REACT_APP_API_LAB_HOST}/session/save-session`, { session });
         } catch (err) {
@@ -133,14 +139,15 @@ function LabPreview({
     }, [assignmentId, reloadKey, loadLab]);
 
     useEffect(() => {
-        if (!labId || (!userId && !username)) return;
+        //if (!labId || (!userId && !username)) return;
+        console.log('Loading session for labId', labId, 'userId', userId, 'username', username);
         setSessionLoaded(false);
         loadSession();
     }, [labId, userId, username, reloadKey, loadSession]);
 
     // AUTO SAVE SESSION - save 
     useEffect(() => { //useeffect cannot be async
-        console.log('Auto-saving session...');
+        //console.log('Auto-saving session...');
         saveSession();
         const timeoutId = setTimeout(saveSession, 1000); //add 1 second delay 
         return () => clearTimeout(timeoutId);

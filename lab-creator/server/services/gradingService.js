@@ -6,7 +6,7 @@ const parseScoreFeedback = (raw) => { //enforce json return from deepseek
   try {
     const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
     const score = Number(parsed?.score);
-    const feedback = typeof parsed?.feedback === 'string' ? parsed.feedback.trim().slice(0, 400) : '';
+    const feedback = typeof parsed?.feedback === 'string' ? parsed.feedback.trim() : '';
 
     if (Number.isFinite(score) && score >= 0 && score <= 1 && feedback.length > 0) {
       return { score, feedback };
@@ -93,7 +93,8 @@ const analyzeStudentCode = async ({ problemDescription, studentCode, testResults
             Problem: ${problemDescription}
             
             The student's class and constructor name is "Solution" because the 
-            code was renamed for grading purposes.
+            code was renamed for grading purposes.Do not mention this in your feedback.
+            The class does not have to be named the same as in the problem description.
   
             Student Code:
             ${studentCode.substring(0, 2000)}
@@ -109,11 +110,11 @@ const analyzeStudentCode = async ({ problemDescription, studentCode, testResults
             Provide:
             1. Overall score (0-1) - award partial credit for partially correct solutions
             2. Constructive feedback on what worked and what didn't
-            3. Specific suggestions for improvement
+            3. Specific suggestions for improvement of the student's code (not the test cases)
             4. Wrap feedback and suggestion in the same key "feedback"
 
             Respond with JSON: { "score": number, "feedback": string }`;
-            console.log('PROMPT',prompt);
+            //console.log('PROMPT',prompt);
 
 
   const response = await axios.post('https://api.deepseek.com/chat/completions', {
@@ -124,7 +125,7 @@ const analyzeStudentCode = async ({ problemDescription, studentCode, testResults
       ],
       response_format: { type: 'json_object' },
       temperature: 0.3,
-      max_tokens: 600
+      max_tokens: 1000 //3-4 chars per token 
     }, {
       headers: { Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}` },
       timeout: 20000
@@ -185,7 +186,7 @@ const buildPrompt = ({ userAnswer, answerKey, question, questionType, AIPrompt }
             Compare the student answer to the answer key, look for misconceptions, 
             and explain how to correct them. Mention the specific concept they misunderstood, 
             point toward the right reasoning, and suggest one next step (e.g., revisit a definition or example).
-            Be kind, concise, and avoid grammar penalties. Feedback should be ≤500 characters.
+            Be kind, concise, and avoid grammar penalties. Feedback should be ≤1000 characters.
             The response will be be in html but ignore all html artifacts and just analyze the text.
             Is the student's answer correct, give a score from 0 to 1 and a brief feedback.
             If the response is empty, just respond with 'response is empty' `;
