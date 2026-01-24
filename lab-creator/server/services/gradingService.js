@@ -108,7 +108,7 @@ const analyzeStudentCode = async ({ problemDescription, studentCode, testResults
             ${testOutput.substring(0, 1000)}
 
             Provide:
-            1. Overall score (0-1) - award partial credit for partially correct solutions
+            1. Overall score (0-1) - calculate it by the number of passed tests over total tests.
             2. Constructive feedback on what worked and what didn't
             3. Specific suggestions for improvement of the student's code (not the test cases)
             4. Wrap feedback and suggestion in the same key "feedback"
@@ -135,13 +135,17 @@ const analyzeStudentCode = async ({ problemDescription, studentCode, testResults
 
 };
 
-const gradeJavaCode = async ({ studentCode, problemDescription, answerKey }) => {
+const gradeJavaCode = async ({ studentCode, problemDescription, testCode }) => {
+  console.log(typeof(studentCode));
+  console.log(typeof(problemDescription));
+  console.log(testCode);
+  console.log(typeof(testCode));
   try {
-    //1. ask deepseek to generate junit tests
-    console.log('Generating JUnit tests via DeepSeek...');
-    const testCode = await generateJUnitTests({ problemDescription, answerKey });
-    // console.log('Generated JUnit tests:');
-    // console.log(testCode);
+    // //1. ask deepseek to generate junit tests
+    // console.log('Generating JUnit tests via DeepSeek...');
+    // const testCode = await generateJUnitTests({ problemDescription, answerKey });
+    // // console.log('Generated JUnit tests:');
+    // // console.log(testCode);
 
     //2. execute student code against generated tests in docker sandbox
     console.log('Running code in Docker sandbox...');

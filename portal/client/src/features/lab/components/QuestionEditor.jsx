@@ -3,7 +3,7 @@ import { createQuestion } from "../models/block";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import { getImageUrlsFromHtml } from './fetchImages';
-import { set } from "date-fns";
+import axios from 'axios';
 
 
 function QuestionEditor({ q, onQuestionChange, onQuestionDelete, level = 0 }) {
@@ -137,9 +137,19 @@ function QuestionEditor({ q, onQuestionChange, onQuestionDelete, level = 0 }) {
                                         {showJavaGenerateTestCodeExpansion && (
                                             <div className="px-2 pb-2">
                                                 <button
-                                                    onClick={() => {
-                                                        // TODO: Call API to generate test code
-                                                        console.log('Generate test code clicked');
+                                                    onClick={async () => {
+                                                        try{
+                                                            console.log('Generating test code for question:', q.prompt);
+                                                            //call API to generate test code
+                                                            const response = await axios.post(`${process.env.REACT_APP_API_LAB_HOST}/grade/java/generate-tests`, {
+                                                                problemDescription: q.prompt || '',
+                                                                answerKey: q.key || ''
+                                                            });
+                                                            //update question with generated test code in question block
+                                                            update("generatedTestCode", response.data.testCode);
+                                                        } catch (error) {
+                                                            console.error('Error generating test code:', error);
+                                                        }
                                                     }}
                                                     className="bg-purple-600 text-white px-4 py-2 rounded mb-2 w-full hover:bg-purple-700"
                                                 >

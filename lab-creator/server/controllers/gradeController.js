@@ -1,7 +1,7 @@
 require('dotenv').config();
 const { PrismaClient } = require('@prisma/client');
-const { gradeWithDeepSeek, computeFinalScore, gradeJavaCode} = require('../services/gradingService');
-const {parseCodeFromHtml} = require('../services/parseHtml');
+const { generateJUnitTests,gradeWithDeepSeek, computeFinalScore, gradeJavaCode} = require('../services/gradingService');
+const {parseCodeFromHtml,parseTextFromHtml} = require('../services/parseHtml');
 const prisma = new PrismaClient();
 
 
@@ -34,6 +34,21 @@ const calculateScore = async (req, res) => {
     }
 };
 
+const generateTestsForJavaQuestion = async (req, res) => {
+    const { problemDescription, answerKey } = req.body;
+    const parsedProblemDescription = parseTextFromHtml(problemDescription);
+    const parsedAnswerKey = parseCodeFromHtml(answerKey);
+    console.log('Generating tests for Java question...');
+    try {
+        const testCode = await generateJUnitTests({ problemDescription: parsedProblemDescription, answerKey: parsedAnswerKey });
+        console.log('Generated JUnit tests:');
+        console.log(testCode);
+        return res.json({ testCode });
+    } catch (err) {
+        console.error('Error generating tests for Java question', err.message);
+        return res.status(500).json({ error: 'Failed to generate tests' });
+    }
+};
 //grade a single question using DeepSeek API
 //filters out empty answers and missing answer keys
 //calls gradeWithDeepseek from gradingService
@@ -58,10 +73,13 @@ const gradeQuestionDeepSeek = async (req, res) => {
 };
 
 const gradeJavaCodeDeepSeek = async (req, res) => {
-    const { userAnswer, answerKey, question } = req.body;
-    const parsedUserAnswer = parseCodeFromHtml(userAnswer);
+    const { userAnswer, testCode, question } = req.body;
+
     try{
-        const result = await gradeJavaCode({ studentCode: parsedUserAnswer, problemDescription: question, answerKey });
+        const result = await gradeJavaCode({ 
+            studentCode: parseCodeFromHtml(userAnswer), 
+            problemDescription: parseTextFromHtml(question), 
+            testCode });
         res.json(result);
     }catch(err){
         console.error('Error in gradeJavaCode controller', err.message);
@@ -82,6 +100,8 @@ const gradeSession = async (req, res) => {
 }
 
 //this is called asynchronously with redis
+//YOU ARE NOW USING A PARSED VERSION OF THE HTML 
+//THIS MIGHT CAUSE ISSUES IN THE FUTURE? DONT FORGET
 const regradeSession = async (req, res) => {
     const { labId, userId, responses, questionLookup, dryRun = true, aiPrompt, includeLatePenalty = false } = req.body;
     if (!labId || !userId || !responses || !questionLookup) {
@@ -100,9 +120,9 @@ const regradeSession = async (req, res) => {
 
             try {
                 const result = await gradeWithDeepSeek({
-                    userAnswer,
-                    answerKey: details.key,
-                    question: details.prompt,
+                    userAnswer: parseCodeFromHtml(userAnswer),
+                    answerKey: parseCodeFromHtml(details.key),
+                    question: parseTextFromHtml(details.prompt),
                     questionType: details.type,
                     AIPrompt: aiPrompt
                 });
@@ -188,4 +208,4 @@ const gradeQuestionOllama = async (req, res) => {
 
 
 
-module.exports = { gradeJavaCodeDeepSeek,gradeSession,regradeSession, gradeQuestionDeepSeek, calculateScore,gradeQuestionOllama };
+module.exports = { generateTestsForJavaQuestion,gradeJavaCodeDeepSeek,gradeSession,regradeSession, gradeQuestionDeepSeek, calculateScore,gradeQuestionOllama };

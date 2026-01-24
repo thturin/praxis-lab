@@ -163,6 +163,7 @@ function LabPreview({
             let answerKey = '';
             let question = '';
             let type = '';
+            let generatedTestCode = '';
             //THIS ASSUMES SUB QUESTIONS DO NOT HAVE SUB QUESTIONS
             //LOOP THROUGH BLOCKS AND ASSIGN ANSWERKEY, QUESTIOHN, TYPE
             for (const block of blocks) { //FIND BLOCK 
@@ -174,6 +175,7 @@ function LabPreview({
                     answerKey = block.key || block.explanation || '';
                     question = block.prompt;
                     type = block.type;
+                    generatedTestCode = block.generatedTestCode || '';
                     break;
                 }
 
@@ -184,6 +186,7 @@ function LabPreview({
                             answerKey = sq.key || sq.explanation || '';
                             question = sq.prompt;
                             type = sq.type;
+                            generatedTestCode = sq.generatedTestCode || '';
                             break;
                         }
                     }
@@ -211,9 +214,10 @@ function LabPreview({
                 let response;
 
                 if (type === 'code') { //JAVA CODE GRADING 
+                    console.log('Grading Java code for questionId', questionId, typeof(generatedTestCode));
                     response = await axios.post(`${process.env.REACT_APP_API_LAB_HOST}/grade/java`, {
                         userAnswer,
-                        answerKey,
+                        testCode:generatedTestCode,
                         question
                     });
 
@@ -229,6 +233,7 @@ function LabPreview({
                 } else {
                     response = await axios.post(`${process.env.REACT_APP_API_LAB_HOST}/grade/deepseek`, {
                         userAnswer,
+                        //THIS IS WRONG NEED TO GET GENERATEDtESTcODE
                         answerKey,
                         question,
                         questionType: type,
