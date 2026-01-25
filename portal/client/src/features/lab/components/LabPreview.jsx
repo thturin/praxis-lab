@@ -346,7 +346,7 @@ function LabPreview({
                         </div>
                     </div>
                 ))}
-                {mode === 'admin' && (
+                {mode === 'admin' && !readOnly &&(
                     <AIPrompt value={aiPrompt} onChange={handleAiPromptChange} />
                 )}
 

@@ -1,6 +1,6 @@
 require('dotenv').config();
 const { PrismaClient } = require('@prisma/client');
-const { generateJUnitTests,gradeWithDeepSeek, computeFinalScore, gradeJavaCode} = require('../services/gradingService');
+const { gradeWithGeneralRubric,generateJUnitTests,gradeWithDeepSeek, computeFinalScore, gradeJavaCode} = require('../services/gradingService');
 const {parseCodeFromHtml,parseTextFromHtml} = require('../services/parseHtml');
 const prisma = new PrismaClient();
 
@@ -63,8 +63,10 @@ const gradeQuestionDeepSeek = async (req, res) => {
         return res.status(400).json({ score: 1, feedback: 'Answer key missing; awarding full credit' });
     }
 
+
     try {
-        const result = await gradeWithDeepSeek({ userAnswer, answerKey, question, questionType, AIPrompt });
+        const result = await gradeWithGeneralRubric({ userAnswer: parseTextFromHtml(userAnswer), answerKey: parseTextFromHtml(answerKey), question: parseTextFromHtml(question), questionType, AIPrompt });
+       // const result = await gradeWithDeepSeek({ userAnswer, answerKey, question, questionType, AIPrompt });
         return res.json(result);
     } catch (err) {
         console.log('Error in accessing deep seek api. Request failed.', err.message);

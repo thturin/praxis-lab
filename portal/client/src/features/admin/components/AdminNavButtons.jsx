@@ -9,22 +9,36 @@ const activeStyle = {
 const AdminNavButtons = ({ onSelect, assignmentTitle, assignmentId, assignmentType, currentTab }) => {
     let viewDisabled = false;
     let submissionsDisabled = false;
-    if(assignmentId === -1){
+    let analyticsDisabled = false;
+    if (assignmentId === -1) {
         viewDisabled = true;
         submissionsDisabled = true;
+        analyticsDisabled = true;
     }
 
-    if(assignmentType === 'github'){
+    if (assignmentType === 'github') {
         viewDisabled = true;
+        analyticsDisabled = true;
     }
 
 
 
     return (
-         <>                  
-         {/* //(OnSelect wrapped in function prevents function from executing immediately. Only on click */}
-            <Button 
-                color="secondary" 
+        <>
+            {/* //(OnSelect wrapped in function prevents function from executing immediately. Only on click */}
+            <Button
+                color="secondary"
+                onClick={() => onSelect('analytics')}
+                style={{
+                    opacity: analyticsDisabled ? 0.5 : 1,
+                    ...(currentTab === 'analytics' ? activeStyle : {})
+                }}
+                disabled={analyticsDisabled}
+            >
+                📊 Analytics
+            </Button>
+            <Button
+                color="secondary"
                 onClick={() => onSelect('review')}
                 style={{
                     opacity: submissionsDisabled ? 0.5 : 1,
@@ -32,27 +46,27 @@ const AdminNavButtons = ({ onSelect, assignmentTitle, assignmentId, assignmentTy
                 }}
                 disabled={submissionsDisabled}
             >
-            👁️ Submissions 
+                👁️ Submissions
             </Button>
-            <Button 
-                color="secondary" 
+            <Button
+                color="secondary"
                 onClick={() => onSelect('manage')}
                 style={{
                     opacity: viewDisabled ? 0.5 : 1,
                     ...(currentTab === 'manage' ? activeStyle : {})
-                }} 
-                disabled={viewDisabled}       
+                }}
+                disabled={viewDisabled}
             >
-            ✅ Manage/Preview 
+                ✅ Manage/Preview
             </Button>
-            <Button 
-                color="primary" 
+            <Button
+                color="primary"
                 onClick={() => onSelect('create')}
                 style={currentTab === 'create' ? activeStyle : undefined}
             >
-            🔨 Select/Build
+                🔨 Select/Build
             </Button>
-                      {/* Fake button for assignment title */}
+            {/* Fake button for assignment title */}
             <Button color="default" style={{ cursor: 'default', pointerEvents: 'none', marginLeft: '8px', opacity: 0.7 }}>
                 📄 {assignmentTitle || "No Assignment Selected"}
             </Button>

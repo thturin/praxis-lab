@@ -10,6 +10,8 @@ import LabPreview from '../../lab/components/LabPreview';
 import SubmissionRegrade from '../components/SubmissionRegrade';
 import CreateAssignment from '../components/CreateAssignment';
 import EditAssignment from '../components/EditAssignment';
+import AnalyticsDashboard from './AnalyticsDashboard';
+import { sub } from 'date-fns';
 
 
 const AdminDashboard = ({ user, onLogout }) => {
@@ -360,6 +362,16 @@ const AdminDashboard = ({ user, onLogout }) => {
                         selectedAssignmentDueDate={undefined} 
                         readOnly={undefined} 
                         onUpdateSubmission={undefined}                    />
+                )}
+
+                {currentTab === 'analytics' && selectedAssignmentObj?.type === 'lab' && (
+                    <AnalyticsDashboard
+                        assignmentId={selectedAssignmentId}
+                        labId={selectedAssignmentObj.labId}
+                        sections={sections}
+                        assignmentTitle={title}
+                        submissions={submissions}
+                    />
                 )}
             </div>
         </div>

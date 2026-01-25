@@ -18,7 +18,39 @@ const parseScoreFeedback = (raw) => { //enforce json return from deepseek
   return { score: 0, feedback: 'Model response malformed or empty' };
 };
 
+//enforce json response from deepseek api called in gradeWithGeneralRubric
+const parseRubricResponse = (raw) => {
+  try {
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
 
+    const correctness = Number(parsed?.correctness);
+    const understanding = Number(parsed?.understanding);
+    const feedback = typeof parsed?.feedback === 'string' ? parsed.feedback.trim() : '';
+
+    // Validate criterion scores
+    if (!Number.isFinite(correctness) || correctness < 0 || correctness > 1) {
+      console.warn('Invalid correctness score:', correctness);
+      return null;
+    }
+    if (!Number.isFinite(understanding) || understanding < 0 || understanding > 1) {
+      console.warn('Invalid understanding score:', understanding);
+      return null;
+    }
+    if (feedback.length === 0) {
+      console.warn('Empty feedback');
+      return null;
+    }
+
+    return { correctness, understanding, feedback };
+  } catch (err) {
+    console.warn('Rubric response parse error', err.message);
+  }
+
+  return null;
+};
+
+
+// Generate JUnit test code using DeepSeek API
 const generateJUnitTests = async ({ problemDescription, answerKey }) => {
   // Generate JUnit test code based on problem description and examples
 
@@ -76,7 +108,7 @@ const generateJUnitTests = async ({ problemDescription, answerKey }) => {
   //POST PROCESS: replace original class name with "Solution"
   // Extract class name from answerKey (e.g., "public class ActivityTracker")
   const classNameMatch = answerKey.match(/public\s+class\s+(\w+)/);
-  if (classNameMatch && classNameMatch[1] !== 'Solution') { 
+  if (classNameMatch && classNameMatch[1] !== 'Solution') {
     const originalClassName = classNameMatch[1];
     cleanedTestCode = cleanedTestCode.replace(new RegExp(originalClassName, 'g'), 'Solution');
     console.log(`Replaced class name "${originalClassName}" with "Solution" in generated tests`);
@@ -85,9 +117,10 @@ const generateJUnitTests = async ({ problemDescription, answerKey }) => {
   return cleanedTestCode;
 };
 
+// Analyze student code and test results to provide score and feedback
 const analyzeStudentCode = async ({ problemDescription, studentCode, testResults, testOutput }) => {
   // Analyze student code against test code to provide feedback
-  
+
   const prompt = `Grade this Java programming submission:
 
             Problem: ${problemDescription}
@@ -114,32 +147,33 @@ const analyzeStudentCode = async ({ problemDescription, studentCode, testResults
             4. Wrap feedback and suggestion in the same key "feedback"
 
             Respond with JSON: { "score": number, "feedback": string }`;
-            //console.log('PROMPT',prompt);
+  //console.log('PROMPT',prompt);
 
 
   const response = await axios.post('https://api.deepseek.com/chat/completions', {
-      model: 'deepseek-chat',
-      messages: [
-        { role: 'system', content: 'You are an empathetic Java instructor. Respond only with JSON.' },
-        { role: 'user', content: prompt }
-      ],
-      response_format: { type: 'json_object' },
-      temperature: 0.3,
-      max_tokens: 1000 //3-4 chars per token 
-    }, {
-      headers: { Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}` },
-      timeout: 20000
-    });
+    model: 'deepseek-chat',
+    messages: [
+      { role: 'system', content: 'You are an empathetic Java instructor. Respond only with JSON.' },
+      { role: 'user', content: prompt }
+    ],
+    response_format: { type: 'json_object' },
+    temperature: 0.3,
+    max_tokens: 1000 //3-4 chars per token 
+  }, {
+    headers: { Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}` },
+    timeout: 20000
+  });
 
   return JSON.parse(response.data.choices[0].message.content);
 
 };
 
+//java type question graing with with deepseek api
 const gradeJavaCode = async ({ studentCode, problemDescription, testCode }) => {
-  console.log(typeof(studentCode));
-  console.log(typeof(problemDescription));
+  console.log(typeof (studentCode));
+  console.log(typeof (problemDescription));
   console.log(testCode);
-  console.log(typeof(testCode));
+  console.log(typeof (testCode));
   try {
     // //1. ask deepseek to generate junit tests
     // console.log('Generating JUnit tests via DeepSeek...');
@@ -176,6 +210,8 @@ const gradeJavaCode = async ({ studentCode, problemDescription, testCode }) => {
   }
 }
 
+//OLD NOT USING RUBRIC
+// Build prompt for DeepSeek grading NON CODING QUESTIONS
 const buildPrompt = ({ userAnswer, answerKey, question, questionType, AIPrompt }) => {
   const basePrompt = AIPrompt || '';
 
@@ -232,6 +268,127 @@ const gradeWithDeepSeek = async ({ userAnswer, answerKey, question, questionType
   return parseScoreFeedback(raw);
 };
 
+
+//LLM MODEL PROMPT FOR NON-CODING QUESTIONS RUBRIC + BASEPROMPT
+// General rubric for all non-Java questions
+const DEFAULT_RUBRIC = {
+  name: "General Answer Rubric",
+  criteria: [
+    {
+      name: "Correctness",
+      weight: 0.6,
+      description: "Accurate and addresses all parts of the question"
+    },
+    {
+      name: "Understanding",
+      weight: 0.4,
+      description: "Shows conceptual grasp and reasoning"
+    }
+  ]
+};
+
+const buildGeneralRubricPrompt = ({ userAnswer, answerKey, question, questionType, AIPrompt }) => {
+  const rubric = DEFAULT_RUBRIC;
+
+  let rubricSection = `\nGRADING RUBRIC (applies to all answers):\n`;
+  rubric.criteria.forEach((criterion) => {
+    rubricSection += `- ${criterion.name} (${(criterion.weight * 100).toFixed(0)}% weight): ${criterion.description}\n`;
+  });
+
+  const basePrompt = AIPrompt || '';
+
+  return `You are a fair, consistent, and empathetic grading assistant. Grade this student response.
+
+          QUESTION:
+          ${question}
+
+          ANSWER KEY/EXPECTED RESPONSE:
+          ${answerKey}
+
+          STUDENT'S ANSWER:
+          ${userAnswer}
+          ${rubricSection}
+          ${basePrompt ? `\nINSTRUCTOR NOTES:\n${basePrompt}` : ''}
+
+          GRADING INSTRUCTIONS:
+          1. Compare student's answer against the answer key
+          2. Score each criterion independently on a 0-1 scale
+          3. Provide specific, actionable feedback
+
+          IMPORTANT:
+          - Respond ONLY with valid JSON: { "correctness": number (0-1), "understanding": number (0-1), "feedback": string }
+          - Feedback should be constructive (mention specific misunderstandings), point toward the right reasoning, suggest one next step, and ≤1000 characters
+          - Be consistent and fair across all answers
+          - If the response is empty, just respond with 'response is empty'
+          - Be kind and encouraging. Avoid grammar penalties.
+          - Explain your scores based on the rubric criteria`;
+};
+
+
+
+const calculateWeightedScore = (rubricScores) => {
+  const correctnessScore = rubricScores.correctness * DEFAULT_RUBRIC.criteria[0].weight; // 0.6
+  const understandingScore = rubricScores.understanding * DEFAULT_RUBRIC.criteria[1].weight; // 0.4
+
+  return {
+    score: correctnessScore + understandingScore,
+    breakdown: {
+      correctness: rubricScores.correctness,
+      understanding: rubricScores.understanding,
+      correctnessContribution: correctnessScore,
+      understandingContribution: understandingScore
+    }
+  };
+};
+
+const gradeWithGeneralRubric = async ({ userAnswer, answerKey, question, questionType, AIPrompt, timeoutMs = 20000 }) => {
+  if (!process.env.DEEPSEEK_API_KEY) {
+    throw new Error('DEEPSEEK_API_KEY is not configured');
+  }
+
+  const prompt = buildGeneralRubricPrompt({ userAnswer, answerKey, question, questionType, AIPrompt });
+
+  const response = await axios.post(
+    'https://api.deepseek.com/chat/completions',
+    {
+      model: 'deepseek-chat',
+      messages: [
+        { role: 'system', content: 'You are a fair and empathetic grading assistant that responds ONLY with JSON.' },
+        { role: 'user', content: prompt },
+      ],
+      response_format: {
+        type: 'json_object',
+      },
+      temperature: 0.2,
+      max_tokens: 350,
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      timeout: timeoutMs,
+    }
+  );
+
+  const raw = response.data?.choices?.[0]?.message?.content || '';
+  const rubricScores = parseRubricResponse(raw);
+
+  if (!rubricScores) {
+    return { score: 0, feedback: 'Model response malformed or empty', breakdown: null };
+  }
+
+  // Calculate final weighted score 
+  const { score, breakdown } = calculateWeightedScore(rubricScores);
+
+  return {
+    score,
+    feedback: rubricScores.feedback,
+    breakdown
+  };
+};
+
+
 // Computes final score from graded results 
 //this is used in gradeController.js regradeSession redis 
 const computeFinalScore = (gradedResults) => {
@@ -245,5 +402,5 @@ const computeFinalScore = (gradedResults) => {
   };
 };
 
-module.exports = { gradeJavaCode,parseScoreFeedback, buildPrompt, gradeWithDeepSeek, computeFinalScore, generateJUnitTests };
+module.exports = { gradeWithGeneralRubric, gradeJavaCode, parseScoreFeedback, buildPrompt, gradeWithDeepSeek, computeFinalScore, generateJUnitTests, parseRubricResponse, calculateWeightedScore, DEFAULT_RUBRIC };
 
