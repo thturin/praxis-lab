@@ -1,6 +1,6 @@
 require('dotenv').config();
 const { PrismaClient } = require('@prisma/client');
-const { gradeWithGeneralRubric,generateJUnitTests,gradeWithDeepSeek, computeFinalScore, gradeJavaCode} = require('../services/gradingService');
+const { gradeWithBinaryRubric, generateJUnitTests, computeFinalScore, gradeJavaCode} = require('../services/gradingService');
 const {parseCodeFromHtml,parseTextFromHtml} = require('../services/parseHtml');
 const prisma = new PrismaClient();
 
@@ -65,7 +65,7 @@ const gradeQuestionDeepSeek = async (req, res) => {
 
 
     try {
-        const result = await gradeWithGeneralRubric({ userAnswer: parseTextFromHtml(userAnswer), answerKey: parseTextFromHtml(answerKey), question: parseTextFromHtml(question), questionType, AIPrompt });
+        const result = await gradeWithBinaryRubric({ userAnswer: parseTextFromHtml(userAnswer), answerKey: parseTextFromHtml(answerKey), question: parseTextFromHtml(question), questionType, AIPrompt });
        // const result = await gradeWithDeepSeek({ userAnswer, answerKey, question, questionType, AIPrompt });
         return res.json(result);
     } catch (err) {
@@ -121,7 +121,7 @@ const regradeSession = async (req, res) => {
             }
 
             try {
-                const result = await gradeWithDeepSeek({
+                const result = await gradeWithBinaryRubric({
                     userAnswer: parseCodeFromHtml(userAnswer),
                     answerKey: parseCodeFromHtml(details.key),
                     question: parseTextFromHtml(details.prompt),

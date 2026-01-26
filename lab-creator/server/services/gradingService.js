@@ -50,6 +50,36 @@ const parseRubricResponse = (raw) => {
 };
 
 
+const parseBinaryRubricResponse = (raw) => {
+  try {
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+
+    const answerQuality = String(parsed?.answerQuality).toLowerCase();
+    const support = String(parsed?.support).toLowerCase();
+    const complianceClarity = String(parsed?.complianceClarity).toLowerCase();
+    const feedback = typeof parsed?.feedback === 'string' ? parsed.feedback.trim() : '';
+
+    // Validate all criteria are pass or fail
+    const validValues = ['pass', 'fail'];
+    if (!validValues.includes(answerQuality) || !validValues.includes(support) || !validValues.includes(complianceClarity)) {
+      console.warn('Invalid criterion values:', { answerQuality, support, complianceClarity });
+      return null;
+    }
+
+    if (feedback.length === 0) {
+      console.warn('Empty feedback');
+      return null;
+    }
+
+    return { answerQuality, support, complianceClarity, feedback };
+  } catch (err) {
+    console.warn('Binary rubric response parse error', err.message);
+  }
+
+  return null;
+};
+
+
 // Generate JUnit test code using DeepSeek API
 const generateJUnitTests = async ({ problemDescription, answerKey }) => {
   // Generate JUnit test code based on problem description and examples
@@ -269,98 +299,107 @@ const gradeWithDeepSeek = async ({ userAnswer, answerKey, question, questionType
 };
 
 
-//LLM MODEL PROMPT FOR NON-CODING QUESTIONS RUBRIC + BASEPROMPT
-// General rubric for all non-Java questions
-const DEFAULT_RUBRIC = {
-  name: "General Answer Rubric",
+//LLM MODEL PROMPT FOR NON-CODING QUESTIONS - BINARY PASS/FAIL RUBRIC
+// Binary Pass/Fail rubric for all non-Java questions
+const BINARY_RUBRIC = {
+  name: "Binary Pass/Fail Rubric",
   criteria: [
     {
-      name: "Correctness",
-      weight: 0.6,
-      description: "Accurate and addresses all parts of the question"
+      name: "answerQuality",
+      description: "PASS: Directly answers the question, covers the key concepts, and is factually correct. Examples can be simple or brief but should be reasonable illustrations. FAIL: Off-topic, missing key concepts, vague explanations without examples, or contains incorrect reasoning."
     },
     {
-      name: "Understanding",
-      weight: 0.4,
-      description: "Shows conceptual grasp and reasoning"
+      name: "support",
+      description: "PASS: Includes reasoning, evidence, or explanation when required. FAIL: Missing explanation or unsupported claims."
+    },
+    {
+      name: "complianceClarity",
+      description: "PASS: Follows all directions (format, length, constraints) and is clear. FAIL: Ignores directions or is unclear/confusing."
     }
   ]
 };
 
-const buildGeneralRubricPrompt = ({ userAnswer, answerKey, question, questionType, AIPrompt }) => {
-  const rubric = DEFAULT_RUBRIC;
 
-  let rubricSection = `\nGRADING RUBRIC (applies to all answers):\n`;
-  rubric.criteria.forEach((criterion) => {
-    rubricSection += `- ${criterion.name} (${(criterion.weight * 100).toFixed(0)}% weight): ${criterion.description}\n`;
+//THE PROMPT MIGHT A LITTLE TOO LENIENT ON EXAMPLES. LOOK OUT FOR RESPONSES THAT GIVE WEAK EXAMPLES AND STILL GET PASS
+const buildBinaryRubricPrompt = ({ userAnswer, answerKey, question, questionType, AIPrompt }) => {
+  const rubric = BINARY_RUBRIC;
+
+  let rubricSection = `\nGRADING RUBRIC (Binary Pass/Fail - ALL must pass):\n\n`;
+  rubric.criteria.forEach((criterion, idx) => {
+    rubricSection += `${idx + 1}. ${criterion.name}:\n   ${criterion.description}\n\n`;
   });
 
   const basePrompt = AIPrompt || '';
 
-  return `You are a fair, consistent, and empathetic grading assistant. Grade this student response.
+  return `You are a consistant, empathetic, and fair grading assistant. Evaluate this student response using binary criteria.
 
-          QUESTION:
-          ${question}
+      QUESTION:
+      ${question}
 
-          ANSWER KEY/EXPECTED RESPONSE:
-          ${answerKey}
+      ANSWER KEY/EXPECTED RESPONSE:
+      ${answerKey}
 
-          STUDENT'S ANSWER:
-          ${userAnswer}
-          ${rubricSection}
-          ${basePrompt ? `\nINSTRUCTOR NOTES:\n${basePrompt}` : ''}
+      STUDENT'S ANSWER:
+      ${userAnswer}
+      ${rubricSection}
+      ${basePrompt ? `\nINSTRUCTOR NOTES:\n${basePrompt}` : ''}
 
-          GRADING INSTRUCTIONS:
-          1. Compare student's answer against the answer key
-          2. Score each criterion independently on a 0-1 scale
-          3. Provide specific, actionable feedback
+      GRADING INSTRUCTIONS:
+      1. Evaluate each criterion independently as PASS or FAIL
+      2. For the overall result: ALL criteria must PASS for overall PASS
+      3. If ANY criterion fails, the overall result is FAIL
+      4. Provide specific feedback explaining which criteria passed/failed and why
+      5. Accept reasonable examples and explanations - they don't need to be exhaustive to count as valid
 
-          IMPORTANT:
-          - Respond ONLY with valid JSON: { "correctness": number (0-1), "understanding": number (0-1), "feedback": string }
-          - Feedback should be constructive (mention specific misunderstandings), point toward the right reasoning, suggest one next step, and ≤1000 characters
-          - Be consistent and fair across all answers
-          - If the response is empty, just respond with 'response is empty'
-          - Be kind and encouraging. Avoid grammar penalties.
-          - Explain your scores based on the rubric criteria`;
+      IMPORTANT:
+      - Respond ONLY with valid JSON: { "answerQuality": "pass|fail", "support": "pass|fail", "complianceClarity": "pass|fail", "feedback": string }
+      - Feedback should identify which criteria failed (if any) and provide constructive guidance (≤1000 characters)
+      - Be consistent - apply criteria fairly and reasonably across all answers
+      - Do not take points off for grammar or spelling
+      - Give credit for examples that are contextually relevant, even if brief or not perfectly explained
+      - If response is empty, mark all criteria as fail`;
 };
 
+const calculateBinaryScore = (rubricScores) => {
+  const allPass =
+    rubricScores.answerQuality === 'pass' &&
+    rubricScores.support === 'pass' &&
+    rubricScores.complianceClarity === 'pass';
 
-
-const calculateWeightedScore = (rubricScores) => {
-  const correctnessScore = rubricScores.correctness * DEFAULT_RUBRIC.criteria[0].weight; // 0.6
-  const understandingScore = rubricScores.understanding * DEFAULT_RUBRIC.criteria[1].weight; // 0.4
+  const score = allPass ? 1.0 : 0.0;
+  const result = allPass ? 'PASS' : 'FAIL';
 
   return {
-    score: correctnessScore + understandingScore,
+    score,
+    result,
     breakdown: {
-      correctness: rubricScores.correctness,
-      understanding: rubricScores.understanding,
-      correctnessContribution: correctnessScore,
-      understandingContribution: understandingScore
+      answerQuality: rubricScores.answerQuality,
+      support: rubricScores.support,
+      complianceClarity: rubricScores.complianceClarity
     }
   };
 };
 
-const gradeWithGeneralRubric = async ({ userAnswer, answerKey, question, questionType, AIPrompt, timeoutMs = 20000 }) => {
+const gradeWithBinaryRubric = async ({ userAnswer, answerKey, question, questionType, AIPrompt, timeoutMs = 20000 }) => {
   if (!process.env.DEEPSEEK_API_KEY) {
     throw new Error('DEEPSEEK_API_KEY is not configured');
   }
 
-  const prompt = buildGeneralRubricPrompt({ userAnswer, answerKey, question, questionType, AIPrompt });
+  const prompt = buildBinaryRubricPrompt({ userAnswer, answerKey, question, questionType, AIPrompt });
 
   const response = await axios.post(
     'https://api.deepseek.com/chat/completions',
     {
       model: 'deepseek-chat',
       messages: [
-        { role: 'system', content: 'You are a fair and empathetic grading assistant that responds ONLY with JSON.' },
+        { role: 'system', content: 'You are a strict but fair grading assistant that responds ONLY with JSON.' },
         { role: 'user', content: prompt },
       ],
       response_format: {
         type: 'json_object',
       },
       temperature: 0.2,
-      max_tokens: 350,
+      max_tokens: 400,
     },
     {
       headers: {
@@ -372,17 +411,17 @@ const gradeWithGeneralRubric = async ({ userAnswer, answerKey, question, questio
   );
 
   const raw = response.data?.choices?.[0]?.message?.content || '';
-  const rubricScores = parseRubricResponse(raw);
+  const rubricScores = parseBinaryRubricResponse(raw);
 
   if (!rubricScores) {
-    return { score: 0, feedback: 'Model response malformed or empty', breakdown: null };
+    return { score: 0, result: 'FAIL', feedback: 'Model response malformed or empty', breakdown: null };
   }
 
-  // Calculate final weighted score 
-  const { score, breakdown } = calculateWeightedScore(rubricScores);
+  const { score, result, breakdown } = calculateBinaryScore(rubricScores);
 
   return {
     score,
+    result,
     feedback: rubricScores.feedback,
     breakdown
   };
@@ -402,5 +441,5 @@ const computeFinalScore = (gradedResults) => {
   };
 };
 
-module.exports = { gradeWithGeneralRubric, gradeJavaCode, parseScoreFeedback, buildPrompt, gradeWithDeepSeek, computeFinalScore, generateJUnitTests, parseRubricResponse, calculateWeightedScore, DEFAULT_RUBRIC };
+module.exports = { gradeWithBinaryRubric, gradeJavaCode, parseScoreFeedback, buildPrompt, gradeWithDeepSeek, computeFinalScore, generateJUnitTests, parseBinaryRubricResponse, calculateBinaryScore, BINARY_RUBRIC };
 
