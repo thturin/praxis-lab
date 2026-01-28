@@ -3,7 +3,6 @@ SIMPLE BINARY RUBRIC
 | Criterion                | PASS (Required)                                                    | FAIL (If Any Occur)                                    |
 | ------------------------ | ------------------------------------------------------------------ | ------------------------------------------------------ |
 | **Answer Quality**       | Directly answers the question, addresses all parts, and is correct | Off-topic, incomplete, or contains incorrect reasoning |
-| **Support**              | Includes reasoning, evidence, or explanation **when required**     | Missing explanation or unsupported claims              |
 | **Compliance & Clarity** | Follows all directions (format, length, constraints) and is clear  | Ignores directions or is unclear/confusing             |
 
 const BINARY_RUBRIC = {
@@ -23,3 +22,10 @@ const BINARY_RUBRIC = {
     }
   ]
 };
+
+SUPER SIMPLE THE MOST MINIMAL
+
+| Decision | Requirement                                                                               |
+| -------- | ----------------------------------------------------------------------------------------- |
+| **PASS** | The response **answers the question correctly** and **follows all directions**            |
+| **FAIL** | The response **does not answer the question correctly** or **does not follow directions** |

@@ -18,36 +18,6 @@ const parseScoreFeedback = (raw) => { //enforce json return from deepseek
   return { score: 0, feedback: 'Model response malformed or empty' };
 };
 
-//enforce json response from deepseek api called in gradeWithGeneralRubric
-const parseRubricResponse = (raw) => {
-  try {
-    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
-
-    const correctness = Number(parsed?.correctness);
-    const understanding = Number(parsed?.understanding);
-    const feedback = typeof parsed?.feedback === 'string' ? parsed.feedback.trim() : '';
-
-    // Validate criterion scores
-    if (!Number.isFinite(correctness) || correctness < 0 || correctness > 1) {
-      console.warn('Invalid correctness score:', correctness);
-      return null;
-    }
-    if (!Number.isFinite(understanding) || understanding < 0 || understanding > 1) {
-      console.warn('Invalid understanding score:', understanding);
-      return null;
-    }
-    if (feedback.length === 0) {
-      console.warn('Empty feedback');
-      return null;
-    }
-
-    return { correctness, understanding, feedback };
-  } catch (err) {
-    console.warn('Rubric response parse error', err.message);
-  }
-
-  return null;
-};
 
 
 const parseBinaryRubricResponse = (raw) => {
@@ -55,14 +25,13 @@ const parseBinaryRubricResponse = (raw) => {
     const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
 
     const answerQuality = String(parsed?.answerQuality).toLowerCase();
-    const support = String(parsed?.support).toLowerCase();
-    const complianceClarity = String(parsed?.complianceClarity).toLowerCase();
+    const compliance = String(parsed?.compliance).toLowerCase();
     const feedback = typeof parsed?.feedback === 'string' ? parsed.feedback.trim() : '';
 
     // Validate all criteria are pass or fail
     const validValues = ['pass', 'fail'];
-    if (!validValues.includes(answerQuality) || !validValues.includes(support) || !validValues.includes(complianceClarity)) {
-      console.warn('Invalid criterion values:', { answerQuality, support, complianceClarity });
+    if (!validValues.includes(answerQuality) || !validValues.includes(compliance)) {
+      console.warn('Invalid criterion values:', { answerQuality, compliance });
       return null;
     }
 
@@ -71,7 +40,7 @@ const parseBinaryRubricResponse = (raw) => {
       return null;
     }
 
-    return { answerQuality, support, complianceClarity, feedback };
+    return { answerQuality, compliance, feedback };
   } catch (err) {
     console.warn('Binary rubric response parse error', err.message);
   }
@@ -306,15 +275,11 @@ const BINARY_RUBRIC = {
   criteria: [
     {
       name: "answerQuality",
-      description: "PASS: Directly answers the question, covers the key concepts, and is factually correct. Examples can be simple or brief but should be reasonable illustrations. FAIL: Off-topic, missing key concepts, vague explanations without examples, or contains incorrect reasoning."
+      description: "PASS: Directly answers the question as asked, including any required explanations, examples, or reasoning. Addresses all key concepts and is factually correct. FAIL: Off-topic, incomplete, missing required elements, vague without specific details, or contains incorrect reasoning."
     },
     {
-      name: "support",
-      description: "PASS: Includes reasoning, evidence, or explanation when required. FAIL: Missing explanation or unsupported claims."
-    },
-    {
-      name: "complianceClarity",
-      description: "PASS: Follows all directions (format, length, constraints) and is clear. FAIL: Ignores directions or is unclear/confusing."
+      name: "compliance",
+      description: "PASS: Follows all format, length, and constraint directions. Clear and understandable. FAIL: Ignores specified format/length requirements or is unclear/confusing."
     }
   ]
 };
@@ -347,28 +312,25 @@ const buildBinaryRubricPrompt = ({ userAnswer, answerKey, question, questionType
       GRADING INSTRUCTIONS:
       1. Base your evaluation ONLY on what the student explicitly wrote - do not infer intent or fill in gaps they left
       2. Evaluate each criterion independently as PASS or FAIL
-      3. For answerQuality: Check if student addressed the key concepts. Examples must be concrete and specific, not just naming a concept
-      4. For support: If the question asks for reasoning/explanation, the student must provide explicit logical steps
-      5. For complianceClarity: Check if student followed all explicit instructions in the question
-      6. For the overall result: ALL criteria must PASS for overall PASS
-      7. If ANY criterion fails, the overall result is FAIL
-      8. Provide specific feedback explaining which criteria passed/failed and why
+      3. For answerQuality: Check if student answered the question completely and correctly. If the question asks for explanation/reasoning/examples, those must be present and specific.
+      4. For compliance: Check if student followed format/length/constraint instructions in the question. Ignore grammar/spelling errors.
+      5. For the overall result: BOTH criteria must PASS for overall PASS
+      6. If EITHER criterion fails, the overall result is FAIL
+      7. Provide specific feedback explaining which criteria passed/failed and why. Provide constructive suggestions for improvement.
 
       IMPORTANT:
-      - Respond ONLY with valid JSON: { "answerQuality": "pass|fail", "support": "pass|fail", "complianceClarity": "pass|fail", "feedback": string }
+      - Respond ONLY with valid JSON: { "answerQuality": "pass|fail", "compliance": "pass|fail", "feedback": string }
       - Grade only what's on the page - do NOT assume the student "meant" something they didn't write
       - Feedback should identify which criteria failed (if any) and provide constructive guidance (≤1000 characters)
-      - Be consistent - apply the same standards across all answers
-      - Do not penalize for grammar or spelling errors
+      - Do not penalize for grammar or spelling errors unless they make the answer unclear
       - Accept examples that demonstrate understanding, even if brief
-      - If response is empty, mark all criteria as fail`;
+      - If response is empty, mark both criteria as fail`;
 };
 
 const calculateBinaryScore = (rubricScores) => {
   const allPass =
     rubricScores.answerQuality === 'pass' &&
-    rubricScores.support === 'pass' &&
-    rubricScores.complianceClarity === 'pass';
+    rubricScores.compliance === 'pass';
 
   const score = allPass ? 1.0 : 0.0;
   const result = allPass ? 'PASS' : 'FAIL';
@@ -378,8 +340,7 @@ const calculateBinaryScore = (rubricScores) => {
     result,
     breakdown: {
       answerQuality: rubricScores.answerQuality,
-      support: rubricScores.support,
-      complianceClarity: rubricScores.complianceClarity
+      compliance: rubricScores.compliance
     }
   };
 };
