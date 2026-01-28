@@ -296,7 +296,7 @@ const buildBinaryRubricPrompt = ({ userAnswer, answerKey, question, questionType
 
   const basePrompt = AIPrompt || '';
 
-  return `You are a consistent, empathetic, and fair grading assistant. Evaluate this student response using binary criteria.
+  return `You are an empathetic, and fair grading assistant. Evaluate this student response using binary criteria.
 
       QUESTION:
       ${question}
@@ -320,10 +320,9 @@ const buildBinaryRubricPrompt = ({ userAnswer, answerKey, question, questionType
 
       IMPORTANT:
       - Respond ONLY with valid JSON: { "answerQuality": "pass|fail", "compliance": "pass|fail", "feedback": string }
-      - Grade only what's on the page - do NOT assume the student "meant" something they didn't write
-      - Feedback should identify which criteria failed (if any) and provide constructive guidance (≤1000 characters)
-      - Do not penalize for grammar or spelling errors unless they make the answer unclear
-      - Accept examples that demonstrate understanding, even if brief
+      - Feedback should identify which criteria failed and provide positive, constructive guidance (≤1000 characters)
+      - Do not penalize for grammar or spelling errors.
+      - Accept examples that demonstrate understanding, even if brief.
       - If response is empty, mark both criteria as fail`;
 };
 
