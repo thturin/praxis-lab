@@ -320,7 +320,7 @@ const BINARY_RUBRIC = {
 };
 
 
-//THE PROMPT MIGHT A LITTLE TOO LENIENT ON EXAMPLES. LOOK OUT FOR RESPONSES THAT GIVE WEAK EXAMPLES AND STILL GET PASS
+//Updated prompt to reduce hallucinations by removing subjective language and adding explicit "grade only what's written" constraint
 const buildBinaryRubricPrompt = ({ userAnswer, answerKey, question, questionType, AIPrompt }) => {
   const rubric = BINARY_RUBRIC;
 
@@ -331,7 +331,7 @@ const buildBinaryRubricPrompt = ({ userAnswer, answerKey, question, questionType
 
   const basePrompt = AIPrompt || '';
 
-  return `You are a consistant, empathetic, and fair grading assistant. Evaluate this student response using binary criteria.
+  return `You are a consistent, empathetic, and fair grading assistant. Evaluate this student response using binary criteria.
 
       QUESTION:
       ${question}
@@ -345,18 +345,22 @@ const buildBinaryRubricPrompt = ({ userAnswer, answerKey, question, questionType
       ${basePrompt ? `\nINSTRUCTOR NOTES:\n${basePrompt}` : ''}
 
       GRADING INSTRUCTIONS:
-      1. Evaluate each criterion independently as PASS or FAIL
-      2. For the overall result: ALL criteria must PASS for overall PASS
-      3. If ANY criterion fails, the overall result is FAIL
-      4. Provide specific feedback explaining which criteria passed/failed and why
-      5. Accept reasonable examples and explanations - they don't need to be exhaustive to count as valid
+      1. Base your evaluation ONLY on what the student explicitly wrote - do not infer intent or fill in gaps they left
+      2. Evaluate each criterion independently as PASS or FAIL
+      3. For answerQuality: Check if student addressed the key concepts. Examples must be concrete and specific, not just naming a concept
+      4. For support: If the question asks for reasoning/explanation, the student must provide explicit logical steps
+      5. For complianceClarity: Check if student followed all explicit instructions in the question
+      6. For the overall result: ALL criteria must PASS for overall PASS
+      7. If ANY criterion fails, the overall result is FAIL
+      8. Provide specific feedback explaining which criteria passed/failed and why
 
       IMPORTANT:
       - Respond ONLY with valid JSON: { "answerQuality": "pass|fail", "support": "pass|fail", "complianceClarity": "pass|fail", "feedback": string }
+      - Grade only what's on the page - do NOT assume the student "meant" something they didn't write
       - Feedback should identify which criteria failed (if any) and provide constructive guidance (≤1000 characters)
-      - Be consistent - apply criteria fairly and reasonably across all answers
-      - Do not take points off for grammar or spelling
-      - Give credit for examples that are contextually relevant, even if brief or not perfectly explained
+      - Be consistent - apply the same standards across all answers
+      - Do not penalize for grammar or spelling errors
+      - Accept examples that demonstrate understanding, even if brief
       - If response is empty, mark all criteria as fail`;
 };
 
