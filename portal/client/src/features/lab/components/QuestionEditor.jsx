@@ -9,9 +9,8 @@ import axios from 'axios';
 function QuestionEditor({ q, onQuestionChange, onQuestionDelete, level = 0 }) {
     const [showAnswerKey, setShowAnswerKey] = useState(false);
     const [showExplanation, setShowExplanation] = useState(false);
-    const [showJavaGenerateTestCodeExpansion, setShowJavaGenerateTestCodeExpansion] = useState(false);
+    const [showJavaGenerateTestCodeExpansion, setShowJavaGenerateTestCodeExpansion] = useState(true);
     const [isExpanded, setIsExpanded] = useState(true);
-
     const showJavaGenerateTestCode = q.type === 'code';
     //onChange passed down from the parent so everything stays in sync
     //INFINITE LOOP OCCURRING EVERY KEYSTROKE TRIGGERS ONCHANGE
@@ -140,7 +139,7 @@ function QuestionEditor({ q, onQuestionChange, onQuestionDelete, level = 0 }) {
                                                 <button
                                                     onClick={async () => {
                                                         try{
-                                                            //console.log('Generating test code for question:', q.prompt);
+                                                            console.log('Generating test code for question:', q.prompt);
                                                             //call API to generate test code
                                                             const response = await axios.post(`${process.env.REACT_APP_API_LAB_HOST}/grade/java/generate-tests`, {
                                                                 problemDescription: q.prompt || '',
