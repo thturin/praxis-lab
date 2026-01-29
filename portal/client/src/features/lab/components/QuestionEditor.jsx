@@ -139,7 +139,7 @@ function QuestionEditor({ q, onQuestionChange, onQuestionDelete, level = 0 }) {
                                                 <button
                                                     onClick={async () => {
                                                         try{
-                                                            console.log('Generating test code for question:', q.prompt);
+                                                            //console.log('Generating test code for question:', q.prompt);
                                                             //call API to generate test code
                                                             const response = await axios.post(`${process.env.REACT_APP_API_LAB_HOST}/grade/java/generate-tests`, {
                                                                 problemDescription: q.prompt || '',

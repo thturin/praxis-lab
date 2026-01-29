@@ -39,6 +39,8 @@ const generateTestsForJavaQuestion = async (req, res) => {
     const parsedProblemDescription = parseTextFromHtml(problemDescription);
     const parsedAnswerKey = parseCodeFromHtml(answerKey);
     console.log('Generating tests for Java question...');
+    console.log('Problem Description:', parsedProblemDescription);
+    console.log('Answer Key:', parsedAnswerKey);
     try {
         const testCode = await generateJUnitTests({ problemDescription: parsedProblemDescription, answerKey: parsedAnswerKey });
         console.log('Generated JUnit tests:');
@@ -46,6 +48,7 @@ const generateTestsForJavaQuestion = async (req, res) => {
         return res.json({ testCode });
     } catch (err) {
         console.error('Error generating tests for Java question', err.message);
+        console.error('error stack', err.stack);
         return res.status(500).json({ error: 'Failed to generate tests' });
     }
 };

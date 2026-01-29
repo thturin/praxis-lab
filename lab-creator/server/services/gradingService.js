@@ -52,7 +52,8 @@ const parseBinaryRubricResponse = (raw) => {
 // Generate JUnit test code using DeepSeek API
 const generateJUnitTests = async ({ problemDescription, answerKey }) => {
   // Generate JUnit test code based on problem description and examples
-
+  console.log('=== generateJUnitTests START ===');
+  //console.log('answerKey:', answerKey);
   const prompt = `You are a Java testing expert. Create JUnit 5 test code for this programming problem:
 
             Problem Description:
@@ -80,40 +81,71 @@ const generateJUnitTests = async ({ problemDescription, answerKey }) => {
                       // Add test logic
                   }
               }
-              IMPORTANT: The student code will always be renamed to class "Solution" before execution. 
+              IMPORTANT: 
+              -The student code will always be renamed to class "Solution" before execution. 
               You MUST use "new Solution(...)" for all object instantiation, even if the answer key 
               shows a different class name like "Student" or "Calculator".
-    
               `;
 
-  const response = await axios.post('https://api.deepseek.com/chat/completions', {
-    model: 'deepseek-chat',
-    messages: [
-      { role: 'system', content: 'You are a Java testing expert. Generate only valid Java code.' },
-      { role: 'user', content: prompt }
-    ],
-    temperature: 0.2,
-    max_tokens: 1500
-  }, {
-    headers: { Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}` },
-    timeout: 30000
-  });
+  try {
+    const response = await axios.post('https://api.deepseek.com/chat/completions', {
+      model: 'deepseek-chat',
+      messages: [
+        { role: 'system', content: 'You are a Java testing expert. Generate only valid Java code.' },
+        { role: 'user', content: prompt }
+      ],
+      temperature: 0.2,
+      max_tokens: 1500
+    }, {
+      headers: { Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
+                'Content-Type': 'application/json' },
+      timeout: 60000 //60 seconds 
+    });
 
-  const testCode = response.data?.choices?.[0]?.message?.content || '';
-  let cleanedTestCode = testCode.replace(/```java|```/g, '').trim(); // Remove markdown if present
+    console.log('DeepSeek API Response Status:', response.status);
+    console.log('DeepSeek Response Data:', JSON.stringify(response.data, null, 2));
 
-  /// WHEN WE RUN THE TESTS IN DOCKER SANDBOX, THE STUDENT CODE IS RENAMED TO "SOLUTION" 
-  //THE GENERATED TESTS MUST INSTANTIATE "SOLUTION" INSTEAD OF THE ORIGINAL CLASS NAME
-  //POST PROCESS: replace original class name with "Solution"
-  // Extract class name from answerKey (e.g., "public class ActivityTracker")
-  const classNameMatch = answerKey.match(/public\s+class\s+(\w+)/);
-  if (classNameMatch && classNameMatch[1] !== 'Solution') {
-    const originalClassName = classNameMatch[1];
-    cleanedTestCode = cleanedTestCode.replace(new RegExp(originalClassName, 'g'), 'Solution');
-    console.log(`Replaced class name "${originalClassName}" with "Solution" in generated tests`);
+    const testCode = response.data?.choices?.[0]?.message?.content || '';
+    console.log('Test code preview:', testCode.substring(0, 300));
+  
+    let cleanedTestCode = testCode.replace(/```java|```/g, '').trim(); // Remove markdown if present
+
+    /// WHEN WE RUN THE TESTS IN DOCKER SANDBOX, THE STUDENT CODE IS RENAMED TO "SOLUTION" 
+    //THE GENERATED TESTS MUST INSTANTIATE "SOLUTION" INSTEAD OF THE ORIGINAL CLASS NAME
+    //POST PROCESS: replace original class name with "Solution"
+    // Extract class name from answerKey (e.g., "public class ActivityTracker")
+    const classNameMatch = answerKey.match(/public\s+class\s+(\w+)/);
+    if (classNameMatch && classNameMatch[1] !== 'Solution') {
+      const originalClassName = classNameMatch[1];
+      cleanedTestCode = cleanedTestCode.replace(new RegExp(originalClassName, 'g'), 'Solution');
+      console.log(`Replaced class name "${originalClassName}" with "Solution" in generated tests`);
+    }
+
+    console.log('=== generateJUnitTests SUCCESS ===');
+    return cleanedTestCode;
+
+  } catch (err) {
+    console.error('=== ERROR in generateJUnitTests ===');
+    console.error('Error message:', err.message);
+    console.error('Error stack:', err.stack);
+
+    if (err.response) {
+      console.error('API Response Status:', err.response.status);
+      console.error('API Response Headers:', err.response.headers);
+      console.error('API Response Data:', JSON.stringify(err.response.data, null, 2));
+    } else if (err.request) {
+      console.error('Request was made but no response received');
+      console.error('Request details:', {
+        url: err.config?.url,
+        method: err.config?.method,
+        timeout: err.config?.timeout
+      });
+    } else {
+      console.error('Error setting up request:', err.message);
+    }
+
+    throw err;
   }
-
-  return cleanedTestCode;
 };
 
 // Analyze student code and test results to provide score and feedback
