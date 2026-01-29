@@ -11,6 +11,7 @@ function QuestionEditor({ q, onQuestionChange, onQuestionDelete, level = 0 }) {
     const [showExplanation, setShowExplanation] = useState(false);
     const [showJavaGenerateTestCodeExpansion, setShowJavaGenerateTestCodeExpansion] = useState(false);
     const [isExpanded, setIsExpanded] = useState(true);
+
     const showJavaGenerateTestCode = q.type === 'code';
     //onChange passed down from the parent so everything stays in sync
     //INFINITE LOOP OCCURRING EVERY KEYSTROKE TRIGGERS ONCHANGE
