@@ -82,6 +82,7 @@ async function compileAndRunJavaWithTests({ studentCode, testCode, timeout = 600
     //create a temporary directory for the code execution
     const startTime = Date.now();
     const tempHostDir = path.join(process.env.HOST_APP_PATH || '/app', 'tmp', `exec-${startTime}`);
+    //for local development you can use this path BELOW
    // const tempHostDir = ('/home/tatiana-turin/projects/edu-platform/lab-creator/server/tmp/exec-' + startTime);
     const tempDir = path.join(__dirname, '..', 'tmp', `exec-${startTime}`);
     //tatiana-turin/projects/edu-platform/lab-creator/server/tmp/exec-1686948572345

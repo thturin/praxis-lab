@@ -214,7 +214,7 @@ const worker = new Worker('submission-regrade', async job => {
 
 }, {
     connection: redisOptions,
-    lockDuration: 300000, // 5 minutes (not 30000 = 30s)
+    lockDuration: 600000, // 10 minutes 
     concurrency: 1
 });
 
