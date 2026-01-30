@@ -141,7 +141,7 @@ function LabPreview({
     useEffect(() => {
         //if (!labId || (!userId && !username)) return;
         console.log('Loading session for labId', labId, 'userId', userId, 'username', username);
-        setSessionLoaded(false);
+        //setSessionLoaded(false);
         loadSession();
     }, [labId, userId, username, reloadKey, loadSession]);
 
