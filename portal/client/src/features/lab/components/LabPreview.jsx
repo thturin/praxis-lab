@@ -130,7 +130,7 @@ function LabPreview({
         } catch (err) {
             console.error('Error saving session. Check backend', err);
         }
-    }, [session, title, userId, labId, sessionLoaded]);
+    }, [session]);
 
     //LOAD SESSION and LAB
     useEffect(() => {
