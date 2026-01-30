@@ -37,7 +37,7 @@ const SubmissionRegrade = ({ assignmentId, selectedSection = null, onRegradeAppl
   };
 
   const pollJobStatus = async (jobId) => {
-    const maxAttempts = 240; // wait up to ~4 minutes
+    const maxAttempts = 360; // wait up to ~6 minutes
     let lastState = null;
     abortPollingRef.current = false; // Reset abort flag at start
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
