@@ -9,7 +9,7 @@ import axios from 'axios';
 function QuestionEditor({ q, onQuestionChange, onQuestionDelete, level = 0 }) {
     const [showAnswerKey, setShowAnswerKey] = useState(false);
     const [showExplanation, setShowExplanation] = useState(false);
-    const [showJavaGenerateTestCodeExpansion, setShowJavaGenerateTestCodeExpansion] = useState(true);
+    const [showJavaGenerateTestCodeExpansion, setShowJavaGenerateTestCodeExpansion] = useState(false);
     const [isExpanded, setIsExpanded] = useState(true);
     const showJavaGenerateTestCode = q.type === 'code';
     //onChange passed down from the parent so everything stays in sync
