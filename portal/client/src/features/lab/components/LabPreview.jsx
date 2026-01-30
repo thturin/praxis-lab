@@ -29,7 +29,7 @@ function LabPreview({
     const isAdmin = mode === 'admin';
  
     const [session, setSession] = useState(createSession(title, username, userId, labId));
-    const [sessionLoaded, setSessionLoaded] = useState(false);
+   // const [sessionLoaded, setSessionLoaded] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const exportSessionToFile = () => {
@@ -112,7 +112,7 @@ function LabPreview({
             });
 
             if (response.data.session) setSession(response.data.session);
-            setSessionLoaded(true);
+            //setSessionLoaded(true);
             console.log('Session Loaded!');
         } catch (err) {
             console.error('Error in getResponse()', err);
