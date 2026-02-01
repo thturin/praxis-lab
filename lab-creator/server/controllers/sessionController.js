@@ -31,24 +31,47 @@ const saveSession = async (req, res) => {
     }
 
     try {
+        // Check if session exists to preserve responses during updates
+        const existingSession = await prisma.session.findUnique({
+            where: { labId_userId: { labId, userId } }
+        });
+
+        //there was an issue where when applying dry regrade would delete the responses for user.
+        //THIS MIGHT JUST BE A BANDAID FIX 
+
+        // Build update data - preserve existing responses if new responses are empty
+        // This prevents accidental data loss when auto-save sends empty responses
+        const updateData = {
+            labTitle,
+            username,
+            gradedResults,
+            finalScore
+        };
+
+        // Only update responses if:
+        // 1. They're non-empty (user provided actual data), OR
+        // 2. It's a new session (no existing session with responses to preserve)
+        if (responses && Object.keys(responses).length > 0) {
+            updateData.responses = responses;
+        } else if (!existingSession) {
+            // New session - include empty responses object
+            updateData.responses = responses || {};
+        }
+        // If session exists and responses are empty, don't include responses in update
+        // This preserves existing responses and prevents auto-save from clearing them
+
         //upsert updates if session exists, or create if it does not
         const newSession = await prisma.session.upsert({
             where: { labId_userId: { labId, userId } },
-            update: {
-                labTitle,
-                username,
-                responses,
-                gradedResults,
-                finalScore
-            },
+            update: updateData,
             create: {
                 labId,
                 labTitle,
                 username,
                 userId,
-                responses,
-                gradedResults,
-                finalScore
+                responses: responses || {},
+                gradedResults: gradedResults || {},
+                finalScore: finalScore || {}
             }
         });
         return res.json({ message: 'Session Saved', newSession });
