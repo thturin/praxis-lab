@@ -58,6 +58,7 @@ const worker = new Worker('submission-regrade', async job => {
             whereClause.id = { in: submissionIds.map(id => Number(id)) };
         }
 
+        //find the submissions with the whereClause
         submissions = await prisma.submission.findMany({
             where: whereClause,
             include: { assignment: true, user: true }
@@ -67,9 +68,11 @@ const worker = new Worker('submission-regrade', async job => {
         return { error: err.message };
     }
 
+    // Log the number of submissions to be processed
     const selectionMsg = submissionIds ? `(${submissionIds.length} selected)` : '(all)';
     console.log(`Processing ${submissions.length} submissions ${selectionMsg} for assignment ${assignmentId}, section ${sectionId}`);
 
+    //loop through each submission and regrade based on type
     for (let i = 0; i < submissions.length; i++) {
         const submission = submissions[i];
         const assignment = submission.assignment;
@@ -78,6 +81,7 @@ const worker = new Worker('submission-regrade', async job => {
         await job.updateProgress(Math.round((i / submissions.length) * 100));
         console.log(`Regrading submission ${i + 1}/${submissions.length} (user: ${submission.user?.username})`);
 
+        //this code is copied and pasted from lab preview handleSubmit function. 
         try {
             if (assignment.type === 'github') {
                 //put github repos into temp directory

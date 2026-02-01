@@ -307,7 +307,7 @@ const BINARY_RUBRIC = {
   criteria: [
     {
       name: "answerQuality",
-      description: "PASS: Directly answers the question as asked, including any required explanations, examples, or reasoning. Addresses all key concepts and is factually correct. FAIL: Off-topic, incomplete, missing required elements, vague without specific details, or contains incorrect reasoning."
+      description: "PASS: Semantically equivalent to expected answer - demonstrates correct understanding and produces equivalent outcomes, even if expressed or structured differently. Includes all required elements. FAIL: Incorrect logic, missing key concepts, or produces different/wrong outcomes."
     },
     {
       name: "compliance",
