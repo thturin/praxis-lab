@@ -311,7 +311,8 @@ const BINARY_RUBRIC = {
     },
     {
       name: "compliance",
-      description: "PASS: Follows all format, length, and constraint directions. Clear and understandable. FAIL: Ignores specified format/length requirements or is unclear/confusing."
+      description: "PASS: Contains all required elements clearly. Structural variations (e.g., different organization, additional context) are acceptable if core content is present. FAIL: Missing required elements, unclear/confusing presentation."
+
     }
   ]
 };
