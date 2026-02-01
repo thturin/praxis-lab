@@ -145,12 +145,13 @@ const worker = new Worker('submission-regrade', async job => {
                     return [];
                 });
 
-                //create a new array of objects that contain the prompt, key, and type
+                //create a new array of objects that contain the prompt, key, type, and generatedTestCode
                 const questionLookup = allQuestions.reduce((acc, question) => {
                     acc[question.id] = {
                         prompt: question.prompt,
                         key: question.key,
-                        type: question.type
+                        type: question.type,
+                        generatedTestCode: question.generatedTestCode
                     };
                     return acc;
                 }, {});

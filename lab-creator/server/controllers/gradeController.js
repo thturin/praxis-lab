@@ -124,20 +124,33 @@ const regradeSession = async (req, res) => {
             }
 
             try {
-                const result = await gradeWithBinaryRubric({
-                    userAnswer: parseCodeFromHtml(userAnswer),
-                    answerKey: parseCodeFromHtml(details.key),
-                    question: parseTextFromHtml(details.prompt),
-                    questionType: details.type,
-                    AIPrompt: aiPrompt
-                });
+                let result;
+
+                // Route to appropriate grading function based on question type
+                if (details.type === 'code' && details.generatedTestCode) {
+                    // Use JUnit test-based grading for Java code questions
+                    result = await gradeJavaCode({
+                        studentCode: parseCodeFromHtml(userAnswer),
+                        problemDescription: parseTextFromHtml(details.prompt),
+                        testCode: details.generatedTestCode
+                    });
+                } else {
+                    // Use binary rubric grading for all other questions
+                    result = await gradeWithBinaryRubric({
+                        userAnswer: parseCodeFromHtml(userAnswer),
+                        answerKey: parseCodeFromHtml(details.key),
+                        question: parseTextFromHtml(details.prompt),
+                        questionType: details.type,
+                        AIPrompt: aiPrompt
+                    });
+                }
 
                 regradedResults[questionId] = {
                     score: result.score,
                     feedback: result.feedback
                 };
 
-                //30+ simultaneous deepseek requests get 
+                //30+ simultaneous deepseek requests get
                 //Error grading question 1765678253268 during regrade getaddrinfo EAI_AGAIN api.deepseek.com
                 //add a small delay
                 await new Promise(resolve => setTimeout(resolve,500)); //500 ms delay
