@@ -134,6 +134,12 @@ const regradeSession = async (req, res) => {
                         problemDescription: parseTextFromHtml(details.prompt),
                         testCode: details.generatedTestCode
                     });
+                    regradedResults[questionId] = {
+                        score: result.gradingResults.score,
+                        feedback: result.gradingResults.feedback,
+                        testResults: result.testResults
+                };
+                    
                 } else {
                     // Use binary rubric grading for all other questions
                     result = await gradeWithBinaryRubric({
@@ -143,12 +149,14 @@ const regradeSession = async (req, res) => {
                         questionType: details.type,
                         AIPrompt: aiPrompt
                     });
+
+                    regradedResults[questionId] = {
+                        score: result.score,
+                        feedback: result.feedback
+                };
                 }
 
-                regradedResults[questionId] = {
-                    score: result.score,
-                    feedback: result.feedback
-                };
+             
 
                 //30+ simultaneous deepseek requests get
                 //Error grading question 1765678253268 during regrade getaddrinfo EAI_AGAIN api.deepseek.com

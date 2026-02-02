@@ -201,10 +201,10 @@ const analyzeStudentCode = async ({ problemDescription, studentCode, testResults
 
 //java type question graing with with deepseek api
 const gradeJavaCode = async ({ studentCode, problemDescription, testCode }) => {
-  console.log(typeof (studentCode));
-  console.log(typeof (problemDescription));
-  console.log(testCode);
-  console.log(typeof (testCode));
+  // console.log(typeof (studentCode));
+  // console.log(typeof (problemDescription));
+  // console.log(testCode);
+  // console.log(typeof (testCode));
   try {
     // //1. ask deepseek to generate junit tests
     // console.log('Generating JUnit tests via DeepSeek...');
