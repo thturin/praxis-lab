@@ -36,29 +36,41 @@ const saveSession = async (req, res) => {
             where: { labId_userId: { labId, userId } }
         });
 
-        //there was an issue where when applying dry regrade would delete the responses for user.
-        //THIS MIGHT JUST BE A BANDAID FIX 
+        // Build update data - preserve existing data if new data is empty
+        // This prevents accidental data loss when auto-save sends empty data
+        //WHAT THE PROBLEM WAS. SOMETIMES RESPONSES, GRADEDRESULTS WERE EMPTY OBJECT{}
+        //THE EMPTY OBJECT WOULD BE SENT TO THE BACKEND AND OVERWRITE THE EXISTING DATA
+        //SO NOW WE ONLY UPDATE IF THE NEW DATA IS NON-EMPTY
 
-        // Build update data - preserve existing responses if new responses are empty
-        // This prevents accidental data loss when auto-save sends empty responses
+        //This could be a problem if we want to intentionally clear data, but for now this is safer
         const updateData = {
             labTitle,
-            username,
-            gradedResults,
-            finalScore
+            username
         };
 
-        // Only update responses if:
-        // 1. They're non-empty (user provided actual data), OR
-        // 2. It's a new session (no existing session with responses to preserve)
+        // Only update responses if non-empty OR it's a new session
         if (responses && Object.keys(responses).length > 0) {
             updateData.responses = responses;
         } else if (!existingSession) {
-            // New session - include empty responses object
             updateData.responses = responses || {};
         }
-        // If session exists and responses are empty, don't include responses in update
-        // This preserves existing responses and prevents auto-save from clearing them
+
+        // Only update gradedResults if non-empty OR it's a new session
+        // This prevents wiping graded data when client sends empty gradedResults
+        if (gradedResults && Object.keys(gradedResults).length > 0) {
+            updateData.gradedResults = gradedResults;
+        } else if (!existingSession) {
+            updateData.gradedResults = gradedResults || {};
+        }
+
+        // Only update finalScore if non-empty and totalScore > 0 OR it's a new session
+        //totalScore should always be greater than 0 for a valid score. If not, there are no questions present in the lab
+        // This prevents wiping final score when client sends empty finalScore
+        if (finalScore && Object.keys(finalScore).length > 0 && finalScore.totalScore>0) {
+            updateData.finalScore = finalScore;
+        } else if (!existingSession) {
+            updateData.finalScore = finalScore || {};
+        }
 
         //upsert updates if session exists, or create if it does not
         const newSession = await prisma.session.upsert({

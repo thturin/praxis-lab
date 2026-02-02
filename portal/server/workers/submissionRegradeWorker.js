@@ -95,16 +95,16 @@ const worker = new Worker('submission-regrade', async job => {
                 );
 
                 //IF A DRY RUN, DO NOT UPDATE SUBMISSIONS
-                if (dryRun) {
-                    summary = {
-                        submissionId: submission.id,
-                        user: submission.user?.username,
-                        type: 'github',
-                        result
-                    };
-                    await job.log(JSON.stringify(summary));
-                    dryRunSummaries.push(summary);
-                } else {
+                // if (dryRun) {
+                //     summary = {
+                //         submissionId: submission.id,
+                //         user: submission.user?.username,
+                //         type: 'github',
+                //         result
+                //     };
+                //     await job.log(JSON.stringify(summary));
+                //     dryRunSummaries.push(summary);
+                // } else {
                     await prisma.submission.update({
                         where: { id: submission.id },
                         data: {
@@ -112,7 +112,7 @@ const worker = new Worker('submission-regrade', async job => {
                             score: result.score
                         }
                     });
-                }
+                //}
             }
 
             if (assignment.type === 'lab') {
@@ -175,18 +175,18 @@ const worker = new Worker('submission-regrade', async job => {
 
                 const regradeResult = regradeResponse.data || {};
 
-                if (dryRun) {
-                    summary = {
-                        submissionId: submission.id,
-                        user: submission.user?.username,
-                        type: 'lab',
-                        gradedResults: regradeResult.gradedResults || {},
-                        finalScore: regradeResult.finalScore || null
-                    };
-                    console.log(`User ${submission.user?.username} dryRun summary->>${JSON.stringify(summary)}`);
-                    await job.log(JSON.stringify(summary));
-                    dryRunSummaries.push(summary);
-                } else {
+                // if (dryRun) {
+                //     summary = {
+                //         submissionId: submission.id,
+                //         user: submission.user?.username,
+                //         type: 'lab',
+                //         gradedResults: regradeResult.gradedResults || {},
+                //         finalScore: regradeResult.finalScore || null
+                //     };
+                //     console.log(`User ${submission.user?.username} dryRun summary->>${JSON.stringify(summary)}`);
+                //     await job.log(JSON.stringify(summary));
+                //     dryRunSummaries.push(summary);
+               // } else {
                     //update the submission's rawScore and score
                     const rawScore = Number(regradeResult.finalScore?.percent) || 0;
                     await prisma.submission.update({
@@ -196,7 +196,7 @@ const worker = new Worker('submission-regrade', async job => {
                             score: showLatePenalty ? calculateLateScore(submission.submittedAt, assignment.dueDate, rawScore) : rawScore
                         }
                     });
-                }
+                //}
 
                 if(i<submissions.length-1){
                     await new Promise(resolve => setTimeout(resolve, 2**i));
@@ -212,9 +212,9 @@ const worker = new Worker('submission-regrade', async job => {
     await job.updateProgress(100);
     console.log(`Completed regrading ${submissions.length} submissions`);
 
-    if (dryRun) {
-        return { summaries: dryRunSummaries, count: dryRunSummaries.length };
-    }
+    // if (dryRun) {
+    //     return { summaries: dryRunSummaries, count: dryRunSummaries.length };
+    // }
     return { success: true, count: submissions.length };
 
 }, {

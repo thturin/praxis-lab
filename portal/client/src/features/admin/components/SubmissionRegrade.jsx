@@ -4,7 +4,7 @@ import axios from 'axios';
 
 const SubmissionRegrade = ({ assignmentId, selectedSection = null, onRegradeApplied = () => { }, submissions = [] }) => {
   const [status, setStatus] = useState(null);
-  const [dryRunLoading, setDryRunLoading] = useState(false);
+  // const [dryRunLoading, setDryRunLoading] = useState(false); // Disabled - dry run removed from UI
   const [applyLoading, setApplyLoading] = useState(false);
   const [dryRunSummaries, setDryRunSummaries] = useState([]);
   const [selectedSubmissions, setSelectedSubmissions] = useState([]);
@@ -70,8 +70,8 @@ const SubmissionRegrade = ({ assignmentId, selectedSection = null, onRegradeAppl
   };
 
   const runRegrade = async (dryRun) => {
-    const setLoadingState = dryRun ? setDryRunLoading : setApplyLoading;
-    setLoadingState(true);
+    // Since dry run is disabled, always use applyLoading
+    setApplyLoading(true);
     try {
       if (dryRun) setDryRunSummaries([]);
       const resolvedSectionId = (!selectedSection || selectedSection === '-1') ? null : selectedSection;
@@ -114,7 +114,7 @@ const SubmissionRegrade = ({ assignmentId, selectedSection = null, onRegradeAppl
     } finally {
       // Don't reset loading state if aborted (clearQueue already did it)
       if (!abortPollingRef.current) {
-        setLoadingState(false);
+        setApplyLoading(false);
       }
     }
   };
@@ -122,7 +122,7 @@ const SubmissionRegrade = ({ assignmentId, selectedSection = null, onRegradeAppl
   const clearQueue = async () => {
     // Abort polling immediately
     abortPollingRef.current = true;
-    setDryRunLoading(false);
+    // setDryRunLoading(false); // Dry run disabled
     setApplyLoading(false);
 
     try {
@@ -199,8 +199,8 @@ const SubmissionRegrade = ({ assignmentId, selectedSection = null, onRegradeAppl
         </div>
       )}
 
-      {/* //DRY RUN REGRADE BUTTON */}
-      <button
+      {/* DRY RUN BUTTON - DISABLED */}
+      {/* <button
         onClick={() => runRegrade(true)}
         disabled={dryRunLoading || applyLoading || !assignmentId}
         style={{
@@ -217,45 +217,41 @@ const SubmissionRegrade = ({ assignmentId, selectedSection = null, onRegradeAppl
         {dryRunLoading ? 'Queuing…' : selectedSubmissions.length > 0
           ? `Dry Regrade ${selectedSubmissions.length} Selected`
           : 'Dry Regrade All Submissions'}
+      </button> */}
+
+      {/* APPLY REGRADE BUTTON - Always visible */}
+      <button
+        onClick={() => runRegrade(false)}
+        disabled={applyLoading || !assignmentId}
+        style={{
+          padding: '10px 16px',
+          borderRadius: '6px',
+          fontWeight: '600',
+          border: 'none',
+          cursor: applyLoading || !assignmentId ? 'not-allowed' : 'pointer',
+          opacity: applyLoading || !assignmentId ? 0.6 : 1,
+          backgroundColor: '#059669',
+          color: '#fff'
+        }}
+      >
+        {applyLoading ? 'Applying…' : selectedSubmissions.length > 0
+          ? `Apply Regrade to ${selectedSubmissions.length} Selected`
+          : 'Apply Regrade to All Submissions'}
       </button>
 
-      {dryRunSummaries.length > 0 && ( //if ther was a dry run queued, show the button to actually run regrade and apply submissions
-        <>
-          <button
-            onClick={() => runRegrade(false)}
-            disabled={applyLoading || !assignmentId}
-            style={{
-              marginLeft: '12px',
-              padding: '10px 16px',
-              borderRadius: '6px',
-              fontWeight: '600',
-              border: 'none',
-              cursor: applyLoading || !assignmentId ? 'not-allowed' : 'pointer',
-              opacity: applyLoading || !assignmentId ? 0.6 : 1,
-              backgroundColor: '#059669',
-              color: '#fff'
-            }}
-          >
-            {applyLoading ? 'Applying…' : 'Apply Regrade Updates'}
-          </button>
-
-          {/* LATE PENALTY CHECKBOX */}
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginLeft: '12px' }}>
-            <input
-              type="checkbox"
-              id="showLatePenalty"
-              checked={showLatePenalty}
-              onChange={(e) => setShowLatePenalty(e.target.checked)}
-              style={{ transform: 'scale(1.3)', cursor: 'pointer' }}
-            />
-            <label htmlFor="showLatePenalty" style={{ fontSize: '14px', cursor: 'pointer' }}>
-              Include late penalty
-            </label>
-          </div>
-
-
-        </>
-      )}
+      {/* LATE PENALTY CHECKBOX */}
+      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginLeft: '12px' }}>
+        <input
+          type="checkbox"
+          id="showLatePenalty"
+          checked={showLatePenalty}
+          onChange={(e) => setShowLatePenalty(e.target.checked)}
+          style={{ transform: 'scale(1.3)', cursor: 'pointer' }}
+        />
+        <label htmlFor="showLatePenalty" style={{ fontSize: '14px', cursor: 'pointer' }}>
+          Include late penalty
+        </label>
+      </div>
 
       <button
         onClick={clearQueue}

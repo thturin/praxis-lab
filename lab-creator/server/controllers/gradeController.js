@@ -178,9 +178,9 @@ const regradeSession = async (req, res) => {
             rawScore: finalScore.totalScore
         };
 
-        if (dryRun) { //if the admin is doing dryRun, return data
-            return res.json(responsePayload);
-        }
+        // if (dryRun) { //if the admin is doing dryRun, return data
+        //     return res.json(responsePayload);
+        // }
 
         const updatedSession = await prisma.session.update({
             where: { labId_userId: { labId, userId } },
