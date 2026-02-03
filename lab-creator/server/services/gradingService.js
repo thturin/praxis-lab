@@ -295,7 +295,10 @@ const buildBinaryRubricPrompt = ({ userAnswer, answerKey, question, questionType
       - Feedback should identify which criteria failed and provide positive, constructive guidance (≤1000 characters)
       - Do not penalize for grammar or spelling errors.
       - Accept examples that demonstrate understanding, even if brief.
-      - If response is empty, mark both criteria as fail`;
+      - If response is empty, mark both criteria as fail
+      - When the student's answer contains code, evaluate correctness by tracing execution with test inputs, not by comparing code structure or algorithm to the answer key. Different approaches (e.g., swaps vs. store-and-shift, iterative vs. recursive, different loop structures) that produce the correct output must PASS.
+      `;
+      
 };
 
 const calculateBinaryScore = (rubricScores) => {
