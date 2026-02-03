@@ -281,13 +281,13 @@ const buildBinaryRubricPrompt = ({ userAnswer, answerKey, question, questionType
       ${basePrompt ? `\nINSTRUCTOR NOTES:\n${basePrompt}` : ''}
 
       GRADING INSTRUCTIONS:
-      1. Base your evaluation ONLY on what the student explicitly wrote - do not infer intent or fill in gaps they left
-      2. Evaluate each criterion independently as PASS or FAIL
-      3. For answerQuality: Check if student answered the question completely and correctly. If the question asks for explanation/reasoning/examples, those must be present and specific.
-      4. For compliance: Check if student followed format/length/constraint instructions in the question. Ignore grammar/spelling errors.
-      5. For the overall result: BOTH criteria must PASS for overall PASS
-      6. If EITHER criterion fails, the overall result is FAIL
-      7. Provide specific feedback explaining which criteria passed/failed and why. Provide constructive suggestions for improvement.
+
+      1. Evaluate each criterion independently as PASS or FAIL
+      2. For answerQuality: Check if student answered the question completely and correctly. If the question asks for explanation/reasoning/examples, those must be present and specific.
+      3. For compliance: Check if student followed format/length/constraint instructions in the question. Ignore grammar/spelling errors.
+      4. For the overall result: BOTH criteria must PASS for overall PASS
+      5. If EITHER criterion fails, the overall result is FAIL
+      6. Provide specific feedback explaining which criteria passed/failed and why. Provide constructive suggestions for improvement.
 
       IMPORTANT:
       - Use "You" not "the student" in feedback.
