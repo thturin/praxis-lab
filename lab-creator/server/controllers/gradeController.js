@@ -128,6 +128,7 @@ const regradeSession = async (req, res) => {
 
                 // Route to appropriate grading function based on question type
                 if (details.type === 'code' && details.generatedTestCode) {
+                    console.log(`Grading Java code question ${questionId} using JUnit tests`);
                     // Use JUnit test-based grading for Java code questions
                     result = await gradeJavaCode({
                         studentCode: parseCodeFromHtml(userAnswer),

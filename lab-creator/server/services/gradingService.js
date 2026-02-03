@@ -148,7 +148,7 @@ const generateJUnitTests = async ({ problemDescription, answerKey }) => {
   }
 };
 
-// Analyze student code and test results to provide score and feedback
+// Analyze student code and test results to provide score and feedback DEEP SEEK API
 const analyzeStudentCode = async ({ problemDescription, studentCode, testResults, testOutput }) => {
   // Analyze student code against test code to provide feedback
 
@@ -176,6 +176,9 @@ const analyzeStudentCode = async ({ problemDescription, studentCode, testResults
             2. Constructive feedback on what worked and what didn't
             3. Specific suggestions for improvement of the student's code (not the test cases)
             4. Wrap feedback and suggestion in the same key "feedback"
+
+            IMPORTANT:
+            - Use "You" not "the student" in feedback.
 
             Respond with JSON: { "score": number, "feedback": string }`;
   //console.log('PROMPT',prompt);
@@ -206,14 +209,8 @@ const gradeJavaCode = async ({ studentCode, problemDescription, testCode }) => {
   // console.log(testCode);
   // console.log(typeof (testCode));
   try {
-    // //1. ask deepseek to generate junit tests
-    // console.log('Generating JUnit tests via DeepSeek...');
-    // const testCode = await generateJUnitTests({ problemDescription, answerKey });
-    // // console.log('Generated JUnit tests:');
-    // // console.log(testCode);
-
     //2. execute student code against generated tests in docker sandbox
-    console.log('Running code in Docker sandbox...');
+    console.log('Running code in Docker lab-creator-container...');
     const executionResult = await compileAndRunJavaWithTests({ studentCode, testCode, timeout: 60000 });
     //console.log('Execution result:', executionResult);
 
@@ -226,7 +223,6 @@ const gradeJavaCode = async ({ studentCode, problemDescription, testCode }) => {
       testOutput: executionResult.stdout
     });
 
-    //console.log('Grading results:', gradingResults);
 
     return {
       gradingResults: parseScoreFeedback(JSON.stringify(gradingResults)),//{ score, feedback }
@@ -240,64 +236,6 @@ const gradeJavaCode = async ({ studentCode, problemDescription, testCode }) => {
     throw new Error('Failed to grade Java code');
   }
 }
-
-//OLD NOT USING RUBRIC
-// Build prompt for DeepSeek grading NON CODING QUESTIONS
-const buildPrompt = ({ userAnswer, answerKey, question, questionType, AIPrompt }) => {
-  const basePrompt = AIPrompt || '';
-
-  return `compare the student's answer to the answer key. 
-            Answer Key: ${answerKey}
-            Student Answer: ${userAnswer}
-            Question: ${question}
-            Question Type: ${questionType}
-            AI Prompt: ${basePrompt}.
-            You are an empathetic grading assistant that responds only with a 
-            JSON object with EXACTLY { "score": number, "feedback": string }. 
-            Compare the student answer to the answer key, look for misconceptions, 
-            and explain how to correct them. Mention the specific concept they misunderstood, 
-            point toward the right reasoning, and suggest one next step (e.g., revisit a definition or example).
-            Be kind, concise, and avoid grammar penalties. Feedback should be ≤1000 characters.
-            The response will be be in html but ignore all html artifacts and just analyze the text.
-            Is the student's answer correct, give a score from 0 to 1 and a brief feedback.
-            If the response is empty, just respond with 'response is empty' `;
-};
-
-//Gets called in gradeController.js /deepseek api gradeQuestionDeepSeek and regradeSession
-const gradeWithDeepSeek = async ({ userAnswer, answerKey, question, questionType, AIPrompt, timeoutMs = 20000 }) => {
-  if (!process.env.DEEPSEEK_API_KEY) {
-    throw new Error('DEEPSEEK_API_KEY is not configured');
-  }
-
-  const prompt = buildPrompt({ userAnswer, answerKey, question, questionType, AIPrompt });
-
-  const response = await axios.post(
-    'https://api.deepseek.com/chat/completions',
-    {
-      model: 'deepseek-chat',
-      messages: [
-        { role: 'system', content: 'You are a grading assistant that responds ONLY with a single JSON object.' },
-        { role: 'user', content: prompt },
-      ],
-      response_format: {
-        type: 'json_object',
-      },
-      temperature: 0.2,
-      max_tokens: 350,
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      timeout: timeoutMs,
-    }
-  );
-
-  const raw = response.data?.choices?.[0]?.message?.content || '';
-  //return { score: 0, feedback: 'Model response malformed or empty' };
-  return parseScoreFeedback(raw);
-};
 
 
 //LLM MODEL PROMPT FOR NON-CODING QUESTIONS - BINARY PASS/FAIL RUBRIC
@@ -352,6 +290,7 @@ const buildBinaryRubricPrompt = ({ userAnswer, answerKey, question, questionType
       7. Provide specific feedback explaining which criteria passed/failed and why. Provide constructive suggestions for improvement.
 
       IMPORTANT:
+      - Use "You" not "the student" in feedback.
       - Respond ONLY with valid JSON: { "answerQuality": "pass|fail", "compliance": "pass|fail", "feedback": string }
       - Feedback should identify which criteria failed and provide positive, constructive guidance (≤1000 characters)
       - Do not penalize for grammar or spelling errors.
@@ -437,6 +376,66 @@ const computeFinalScore = (gradedResults) => {
     totalScore: awardedPoints,
   };
 };
+
+
+//OLD LOGIC NOT BEING USED ANYMORE 
+// Build prompt for DeepSeek grading NON CODING QUESTIONS
+const buildPrompt = ({ userAnswer, answerKey, question, questionType, AIPrompt }) => {
+  const basePrompt = AIPrompt || '';
+
+  return `compare the student's answer to the answer key. 
+            Answer Key: ${answerKey}
+            Student Answer: ${userAnswer}
+            Question: ${question}
+            Question Type: ${questionType}
+            AI Prompt: ${basePrompt}.
+            You are an empathetic grading assistant that responds only with a 
+            JSON object with EXACTLY { "score": number, "feedback": string }. 
+            Compare the student answer to the answer key, look for misconceptions, 
+            and explain how to correct them. Mention the specific concept they misunderstood, 
+            point toward the right reasoning, and suggest one next step (e.g., revisit a definition or example).
+            Be kind, concise, and avoid grammar penalties. Feedback should be ≤1000 characters.
+            The response will be be in html but ignore all html artifacts and just analyze the text.
+            Is the student's answer correct, give a score from 0 to 1 and a brief feedback.
+            If the response is empty, just respond with 'response is empty' `;
+};
+
+//Gets called in gradeController.js /deepseek api gradeQuestionDeepSeek and regradeSession
+const gradeWithDeepSeek = async ({ userAnswer, answerKey, question, questionType, AIPrompt, timeoutMs = 20000 }) => {
+  if (!process.env.DEEPSEEK_API_KEY) {
+    throw new Error('DEEPSEEK_API_KEY is not configured');
+  }
+
+  const prompt = buildPrompt({ userAnswer, answerKey, question, questionType, AIPrompt });
+
+  const response = await axios.post(
+    'https://api.deepseek.com/chat/completions',
+    {
+      model: 'deepseek-chat',
+      messages: [
+        { role: 'system', content: 'You are a grading assistant that responds ONLY with a single JSON object.' },
+        { role: 'user', content: prompt },
+      ],
+      response_format: {
+        type: 'json_object',
+      },
+      temperature: 0.2,
+      max_tokens: 350,
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      timeout: timeoutMs,
+    }
+  );
+
+  const raw = response.data?.choices?.[0]?.message?.content || '';
+  //return { score: 0, feedback: 'Model response malformed or empty' };
+  return parseScoreFeedback(raw);
+};
+
 
 module.exports = { gradeWithBinaryRubric, gradeJavaCode, parseScoreFeedback, buildPrompt, gradeWithDeepSeek, computeFinalScore, generateJUnitTests, parseBinaryRubricResponse, calculateBinaryScore, BINARY_RUBRIC };
 

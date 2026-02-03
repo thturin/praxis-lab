@@ -1,12 +1,16 @@
-const Docker = require('dockerode');
+// Docker-in-Docker (uncomment when hosting on server with Docker socket access)
+// const Docker = require('dockerode');
+// const docker = new Docker({ socketPath: '/var/run/docker.sock' });
+
+// child_process approach (for Railway / environments without Docker socket)
+const { spawn } = require('child_process');
+
 const fs = require('fs').promises;
 const path = require('path');
 const {pomXml} = require('./pomXmlFile');
 
-//create dockerode instance
-const docker = new Docker({ socketPath: '/var/run/docker.sock' });
 
-//creates maven project in temporary directory with student code 
+//creates maven project in tmp directory with student code 
 //and ai generated test unit code 
 async function createMavenProject(tempDir, studentCode, testCode) {
   const fs = require('fs').promises;
@@ -66,7 +70,7 @@ function parseJUnitOutput(output) {
 
 // Cleans up temporary directory used for code execution
 async function cleanupExecutionEnvironment(dirPath) {
-  try {
+  try { //don't have this environment variable set anywhere so this wont delete anything for now
     if (process.env.AUTO_CLEANUP_TEMP_DIRS !== 'false') {
       await fs.rm(dirPath, { recursive: true, force: true });
     }
@@ -75,70 +79,142 @@ async function cleanupExecutionEnvironment(dirPath) {
   }
 }
 
+// ===== CHILD_PROCESS VERSION (for Railway / environments without Docker socket) =====
+//CURRENTLY THIS SET UP IS NOT GREAT FOR PRODUCTION. WE ARE USING A CONTAINER THAT HAS ACCESS TO THE INTERNET, 
+//THIS MEANS THAT A MALICIOUS USER COULD WRITE CODE THAT ABUSES THE INTERNET ACCESS TO DO BAD THINGS.
+//IN THE FUTURE WE SHOULD CREATE A SANDBOXED ENVIRONMENT WITH NO INTERNET ACCESS AND LIMITED RESOURCES
+//THAT CAN STILL RUN MAVEN AND DOWNLOAD DEPENDENCIES LOCALLY.
+//FOR NOW THIS IS A GOOD STARTING POINT FOR LOW STAKES PRODUCTION
+//SHOULD CREATE A SEPARATE OFFLINE CONTAINER IN DOCKER  FILE WITH ALL DEPENDENCIES PRE-INSTALLED
+async function compileAndRunJavaWithTests({ studentCode, testCode, timeout = 60000 }) {
+    const startTime = Date.now();
+    const tempDir = path.join(__dirname, '..', 'tmp', `exec-${startTime}`);
+    console.log('Creating temp dir at:', tempDir);
+
+    // Create Maven project structure (same as Docker version)
+    await createMavenProject(tempDir, studentCode, testCode);
+
+    try {
+        // Run mvn clean test directly as a child process
+        const result = await new Promise((resolve, reject) => {
+            let stdout = '';
+            let stderr = '';
+
+            const mvnProcess = spawn('mvn', ['clean', 'test'], {
+                cwd: tempDir,
+                stdio: ['ignore', 'pipe', 'pipe']
+            });
+
+            mvnProcess.stdout.on('data', (data) => {
+                stdout += data.toString();
+            });
+
+            mvnProcess.stderr.on('data', (data) => {
+                stderr += data.toString();
+            });
+
+            // Timeout handling - kill the process if it exceeds the limit
+            const timer = setTimeout(() => {
+                mvnProcess.kill('SIGKILL');
+                reject(new Error('Timeout'));
+            }, timeout);
+
+            mvnProcess.on('close', (code) => {
+                clearTimeout(timer);
+                resolve({ code, stdout, stderr });
+            });
+
+            mvnProcess.on('error', (err) => {
+                clearTimeout(timer);
+                reject(err);
+            });
+        });
+
+        console.log(result.stdout);
+
+        return {
+            success: true,
+            stdout: result.stdout,
+            stderr: result.stderr,
+            testResults: parseJUnitOutput(result.stdout),
+            executionTime: Date.now() - startTime
+        };
+
+    } finally {
+        // Always clean up temp directory
+        await cleanupExecutionEnvironment(tempDir);
+    }
+}
+
+
 //studentCodde is the code written by the student
 //testCode is the code with junit tests created by llm model
 //timeout is max time to allow for execution
-async function compileAndRunJavaWithTests({ studentCode, testCode, timeout = 60000 }) {
-    //create a temporary directory for the code execution
-    const startTime = Date.now();
-    const tempHostDir = path.join(process.env.HOST_APP_PATH || '/app', 'tmp', `exec-${startTime}`);
-    //for local development you can use this path BELOW
-   // const tempHostDir = ('/home/tatiana-turin/projects/edu-platform/lab-creator/server/tmp/exec-' + startTime);
-    const tempDir = path.join(__dirname, '..', 'tmp', `exec-${startTime}`);
-    //tatiana-turin/projects/edu-platform/lab-creator/server/tmp/exec-1686948572345
-    console.log('Creating temp dir at LOOK HERE ', tempDir);
-    // Create Maven project structure in sandbox directory (/workspace in docker)
-    await createMavenProject(tempDir, studentCode, testCode);
 
-    // Run the code in Docker
-    //DOCKER CONTAINERS DO NOT SEE EACH OTHER . THERE IS NO SUCH THING AS DOCKER INSIDE DOCKER UNLESS YOU SET IT UP SPECIFICALLY
-    //HERE WE ARE USING THE DOCKER DAEMON OF THE HOST MACHINE TO SPAWN A CONTAINER THAT WILL RUN THE STUDENT CODE
-    
-    //const cmdString = 'echo "=== WORKSPACE CONTENTS ===" && ls -la /workspace && echo "=== POM.XML ===" && cat /workspace/pom.xml && echo "=== RUNNING MAVEN ===" && mvn clean test';
-     // const cmdString = 'echo "=== SOLUTIONS.JAVA ===" && cat /workspace/src/main/java/Solution.java && echo "=== SOLUTIONSTEST.JAVA ===" && cat /workspace/src/test/java/SolutionTest.java && echo "=== RUNNING MAVEN ===" && mvn clean test';
+// ===== DOCKER-IN-DOCKER VERSION (uncomment when hosting on server with Docker socket access) =====
+// async function compileAndRunJavaWithTests({ studentCode, testCode, timeout = 60000 }) {
+//     //create a temporary directory for the code execution
+//     const startTime = Date.now();
+//     const tempHostDir = path.join(process.env.HOST_APP_PATH || '/app', 'tmp', `exec-${startTime}`);
+//     //for local development you can use this path BELOW
+//    // const tempHostDir = ('/home/tatiana-turin/projects/edu-platform/lab-creator/server/tmp/exec-' + startTime);
+//     const tempDir = path.join(__dirname, '..', 'tmp', `exec-${startTime}`);
+//     //tatiana-turin/projects/edu-platform/lab-creator/server/tmp/exec-1686948572345
+//     console.log('Creating temp dir at LOOK HERE ', tempDir);
+//     // Create Maven project structure in sandbox directory (/workspace in docker)
+//     await createMavenProject(tempDir, studentCode, testCode);
+//
+//     // Run the code in Docker
+//     //DOCKER CONTAINERS DO NOT SEE EACH OTHER . THERE IS NO SUCH THING AS DOCKER INSIDE DOCKER UNLESS YOU SET IT UP SPECIFICALLY
+//     //HERE WE ARE USING THE DOCKER DAEMON OF THE HOST MACHINE TO SPAWN A CONTAINER THAT WILL RUN THE STUDENT CODE
+//
+//     //const cmdString = 'echo "=== WORKSPACE CONTENTS ===" && ls -la /workspace && echo "=== POM.XML ===" && cat /workspace/pom.xml && echo "=== RUNNING MAVEN ===" && mvn clean test';
+//      // const cmdString = 'echo "=== SOLUTIONS.JAVA ===" && cat /workspace/src/main/java/Solution.java && echo "=== SOLUTIONSTEST.JAVA ===" && cat /workspace/src/test/java/SolutionTest.java && echo "=== RUNNING MAVEN ===" && mvn clean test';
+//
+//     const cmdString = 'echo "=== RUNNING MAVEN ===" && mvn clean test';
+//
+//     const container = await docker.createContainer({
+//         Image: 'java-grading-sandbox:latest',
+//         Cmd: ['sh', '-c', cmdString],
+//
+//         //Cmd: ['sh', '-c', 'ls -la /workspace && mvn clean test'], // First list files issue with pom.xml file missing , then run tests
+//         WorkingDir: '/workspace',
+//         //we deleted the sandbox user in dockerfile to avoid permission issues so you down need the line below
+//         //User: `${process.getuid()}:${process.getgid()}`,  // Use host user's UID:GID
+//         HostConfig: {
+//             Memory: 512 * 1024 * 1024, // 512MB
+//             CpuQuota: 50000, // 50% of a CPU
+//             NetworkMode: 'none', // Disable networking but that means no internet access for maven dependencies
+//             Binds: [`${tempHostDir}:/workspace:rw`],//mount temp dir
+//             AutoRemove: false //we will remove manually after getting logs
+//         }
+//     });
+//
+//     // Start the container
+//     await container.start();
+//
+//     // Wait with timeout
+//     // Use Promise
+//     // If timeout occurs, kill the container
+//     const result = await Promise.race([
+//         container.wait(),//wait for completion
+//         //kill the container on timeout
+//         new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), timeout))
+//     ]);
+//
+//     const logs = await container.logs({ stdout: true, stderr: true });
+//     await container.remove();//clean up container
+//     console.log(logs.toString());
+//     return {
+//         success: true,
+//         stdout: logs.toString(),
+//         stderr: '',
+//         testResults: parseJUnitOutput(logs.toString()),
+//         executionTime: Date.now() - startTime
+//     };
+// }
 
-    const cmdString = 'echo "=== RUNNING MAVEN ===" && mvn clean test';
 
-    const container = await docker.createContainer({
-        Image: 'java-grading-sandbox:latest',   
-        Cmd: ['sh', '-c', cmdString],
-
-        //Cmd: ['sh', '-c', 'ls -la /workspace && mvn clean test'], // First list files issue with pom.xml file missing , then run tests
-        WorkingDir: '/workspace',
-        //we deleted the sandbox user in dockerfile to avoid permission issues so you down need the line below
-        //User: `${process.getuid()}:${process.getgid()}`,  // Use host user's UID:GID
-        HostConfig: {
-            Memory: 512 * 1024 * 1024, // 512MB
-            CpuQuota: 50000, // 50% of a CPU
-            NetworkMode: 'none', // Disable networking but that means no internet access for maven dependencies
-            Binds: [`${tempHostDir}:/workspace:rw`],//mount temp dir
-            AutoRemove: false //we will remove manually after getting logs
-        }
-    });
-
-    // Start the container
-    await container.start();
-
-    // Wait with timeout
-    // Use Promise
-    // If timeout occurs, kill the container
-    const result = await Promise.race([
-        container.wait(),//wait for completion
-        //kill the container on timeout
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), timeout))
-    ]);
-
-    const logs = await container.logs({ stdout: true, stderr: true });
-    await container.remove();//clean up container
-    console.log(logs.toString());
-    return {
-        success: true,
-        stdout: logs.toString(),
-        stderr: '',
-        testResults: parseJUnitOutput(logs.toString()),
-        executionTime: Date.now() - startTime
-    };
-}
 
 //we are mounting the volume from host to docker container
 //then running the container to execute the code

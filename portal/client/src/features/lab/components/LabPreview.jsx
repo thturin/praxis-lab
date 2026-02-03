@@ -220,6 +220,7 @@ function LabPreview({
                         testCode:generatedTestCode,
                         question
                     });
+                    console.log('Java grading response', response.data);
 
                     newGradedResults = {
                         ...newGradedResults,
