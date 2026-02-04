@@ -179,6 +179,7 @@ const analyzeStudentCode = async ({ problemDescription, studentCode, testResults
 
             IMPORTANT:
             - Use "You" not "the student" in feedback.
+            - You grade them ONLY based on the provided test results. Do not consider code style, efficiency, or other factors not reflected in the test results.
 
             Respond with JSON: { "score": number, "feedback": string }`;
   //console.log('PROMPT',prompt);
