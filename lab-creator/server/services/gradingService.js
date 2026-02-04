@@ -298,6 +298,7 @@ const buildBinaryRubricPrompt = ({ userAnswer, answerKey, question, questionType
       - If response is empty, mark both criteria as fail
       -When  the student's answer contains code, do not judge upon O(n) complexity and how efficient the algorithm is.
       - When the student's answer contains code, evaluate correctness by tracing execution with test inputs, not by comparing code structure or algorithm to the answer key. Different approaches (e.g., swaps vs. store-and-shift, iterative vs. recursive, different loop structures) that produce the correct output must PASS.
+      - Consider that student's might show their work in the response. Focus on final answer correctness and completeness.
       `;
       
 };
