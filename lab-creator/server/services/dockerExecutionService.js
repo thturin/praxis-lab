@@ -143,7 +143,7 @@ async function compileAndRunJavaWithTests({ studentCode, testCode, timeout = 600
     } finally {
         // Always clean up temp directory
         //COMMENT OUT IF YOU NEED TO DEBUG IN DEVELOPMENT
-       await cleanupExecutionEnvironment(tempDir);
+       //await cleanupExecutionEnvironment(tempDir);
     }
 }
 

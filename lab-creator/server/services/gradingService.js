@@ -161,7 +161,7 @@ const analyzeStudentCode = async ({ problemDescription, studentCode, testResults
             The class does not have to be named the same as in the problem description.
   
             Student Code:
-            ${studentCode.substring(0, 2000)}
+            ${studentCode}
 
             Test Results:
             - Total Tests: ${testResults.total}
@@ -182,7 +182,7 @@ const analyzeStudentCode = async ({ problemDescription, studentCode, testResults
             - You grade them ONLY based on the provided test results. Do not consider code style, efficiency, or other factors not reflected in the test results.
 
             Respond with JSON: { "score": number, "feedback": string }`;
-  //console.log('PROMPT',prompt);
+  console.log('PROMPT',prompt);
 
 
   const response = await axios.post('https://api.deepseek.com/chat/completions', {
@@ -205,10 +205,7 @@ const analyzeStudentCode = async ({ problemDescription, studentCode, testResults
 
 //java type question graing with with deepseek api
 const gradeJavaCode = async ({ studentCode, problemDescription, testCode }) => {
-  // console.log(typeof (studentCode));
-  // console.log(typeof (problemDescription));
-  // console.log(testCode);
-  // console.log(typeof (testCode));
+
   try {
     //2. execute student code against generated tests in docker sandbox
     console.log('Running code in Docker lab-creator-container...');
