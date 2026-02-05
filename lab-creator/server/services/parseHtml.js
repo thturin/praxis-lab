@@ -24,11 +24,28 @@ const parseCodeFromHtml = (htmlContent) => {
 
     // Replace the class name with "Solution"
     // Matches: public class ClassName {
+    const classNameMatch = code.match(/public\s+class\s+(\w+)\s*\{/);
+    const originalClassName = classNameMatch ? classNameMatch[1] : null;
+
     code = code.replace(/public\s+class\s+\w+\s*\{/, 'public class Solution {');
 
-    //replace any constructor names with Solution
-    // Matches: public ClassName(
-    code = code.replace(/public\s+\w+\s*\(/, 'public Solution(');
+    // If we found an original class name, replace all instances
+    //REPLACE CONSTRUCTOR METHOD AND CONSTRUCTOR INSTANCES
+    //PUBLIC CLASS ActivityTracker { -> PUBLIC CLASS Solution {
+    //ActivityTracker tracker = new ActivityTracker(120); -> Solution tracker = new Solution(120);
+    if (originalClassName && originalClassName !== 'Solution') {
+        // Replace constructor declarations: public ClassName(
+        code = code.replace(new RegExp(`public\\s+${originalClassName}\\s*\\(`, 'g'), 'public Solution(');
+
+        // Replace instantiation: new ClassName(
+        code = code.replace(new RegExp(`new\\s+${originalClassName}\\s*\\(`, 'g'), 'new Solution(');
+
+        // Replace variable type declarations: ClassName varName =
+        // This handles cases like: EnhancedArray a = new Solution(0);
+        code = code.replace(new RegExp(`\\b${originalClassName}\\s+\\w+\\s*=`, 'g'), (match) => {
+            return match.replace(originalClassName, 'Solution');
+        });
+    }
 
     // console.log('Parsed code:');
     // console.log(code);
