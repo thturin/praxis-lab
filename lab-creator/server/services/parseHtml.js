@@ -22,6 +22,14 @@ const parseCodeFromHtml = (htmlContent) => {
         .replace(/\u200B/g, '')       // zero-width space
         .replace(/\uFEFF/g, '');      // BOM
 
+
+    //  Class declarations: public class EnhancedArray → public class Solution
+    // Constructors: public EnhancedArray() → public Solution()
+    // Instantiation: new EnhancedArray(0) → new Solution(0)
+    // Variable declarations: EnhancedArray a = → Solution a =
+    // Method return types: public EnhancedArray method() → public Solution method()
+    // Method parameters: void process(EnhancedArray arr) → void process(Solution arr)
+    // Array types: EnhancedArray[] → Solution[] 
     // Replace the class name with "Solution"
     // Matches: public class ClassName {
     const classNameMatch = code.match(/public\s+class\s+(\w+)\s*\{/);
@@ -29,10 +37,6 @@ const parseCodeFromHtml = (htmlContent) => {
 
     code = code.replace(/public\s+class\s+\w+\s*\{/, 'public class Solution {');
 
-    // If we found an original class name, replace all instances
-    //REPLACE CONSTRUCTOR METHOD AND CONSTRUCTOR INSTANCES
-    //PUBLIC CLASS ActivityTracker { -> PUBLIC CLASS Solution {
-    //ActivityTracker tracker = new ActivityTracker(120); -> Solution tracker = new Solution(120);
     if (originalClassName && originalClassName !== 'Solution') {
         // Replace constructor declarations: public ClassName(
         code = code.replace(new RegExp(`public\\s+${originalClassName}\\s*\\(`, 'g'), 'public Solution(');
@@ -45,6 +49,22 @@ const parseCodeFromHtml = (htmlContent) => {
         code = code.replace(new RegExp(`\\b${originalClassName}\\s+\\w+\\s*=`, 'g'), (match) => {
             return match.replace(originalClassName, 'Solution');
         });
+
+        // Replace method return types: public/private ClassName methodName(
+        code = code.replace(new RegExp(`\\b(public|private|protected)\\s+${originalClassName}\\s+\\w+\\s*\\(`, 'g'), (match) => {
+            return match.replace(originalClassName, 'Solution');
+        });
+
+        // Replace method parameters: (ClassName param) or (ClassName param,
+        code = code.replace(new RegExp(`\\(\\s*${originalClassName}\\s+\\w+`, 'g'), (match) => {
+            return match.replace(originalClassName, 'Solution');
+        });
+        code = code.replace(new RegExp(`,\\s*${originalClassName}\\s+\\w+`, 'g'), (match) => {
+            return match.replace(originalClassName, 'Solution');
+        });
+
+        // Replace array declarations: ClassName[] varName
+        code = code.replace(new RegExp(`\\b${originalClassName}\\[\\]`, 'g'), 'Solution[]');
     }
 
     // console.log('Parsed code:');
