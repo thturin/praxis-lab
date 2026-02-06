@@ -24,7 +24,7 @@ services:
     ports:
       - "15432:5432"
     volumes:
-      - pgdata-portal:/var/lib/postgresql/data
+      - /home/tatiana-turin/projects/databases/portal:/var/lib/postgresql/data
     networks:
       - edu-platform-network
     restart: no
@@ -38,7 +38,7 @@ services:
     ports:
       - "15433:5432"
     volumes:
-      - pgdata-lab-creator:/var/lib/postgresql/data
+      - /home/tatiana-turin/projects/databases/lab-creator:/var/lib/postgresql/data
     networks:
       - edu-platform-network
     restart: no
