@@ -1,7 +1,7 @@
 require('dotenv').config();
 const { PrismaClient } = require('@prisma/client');
-const { gradeWithBinaryRubric, generateJUnitTests, computeFinalScore, gradeJavaCode} = require('../services/gradingService');
-const {parseCodeFromHtml,parseTextFromHtml} = require('../services/parseHtml');
+const { gradeWithBinaryRubric, generateJUnitTests, computeFinalScore, gradeJavaCode} = require('../services/grading/gradingService');
+const {parseCodeFromHtml,parseTextFromHtml} = require('../utils/parseHtml');
 const prisma = new PrismaClient();
 
 

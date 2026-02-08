@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { pomXml } = require('../../services/pomXmlFile');
+const { pomXml } = require('../../services/docker/pomXmlFile');
 
 // Write pom.xml to the same directory as this script
 const outputPath = path.join(__dirname, 'pom.xml');
