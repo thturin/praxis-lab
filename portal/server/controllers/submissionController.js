@@ -60,31 +60,35 @@ const verifyGithubOwnership = async (req, res) => {
     }
 };
 
+
+//CURRENTLY WE ARE DISABLING LATE SCORE BECAUSE 
+//THERE ARE TOO MANY ISSUES WITH SCORING AND IT IS CAUSING CONFUSION FOR STUDENTS. WE CAN REVISIT THIS LATER ONCE THE GRADING SYSTEM IS MORE STABLE.
 const calculateLateScore = (submissionDate, dueDateInput, score) => { //dueDate accepts ISO strings or actual date object
-    if (!dueDateInput) return score;
-    const dueDate = dueDateInput instanceof Date
-        ? dueDateInput
-        : parseISO(typeof dueDateInput === 'string' ? dueDateInput : String(dueDateInput));
-    const submittedAt = submissionDate instanceof Date
-        ? submissionDate
-        : parseISO(typeof submissionDate === 'string' ? submissionDate : String(submissionDate));
-    const diffTime = submittedAt - dueDate;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    if (diffDays > 0 && score !== 0) { //if submission is late and not a 0 
-        //1 day late 
-        if (diffDays === 1) {
-            return score * .9;
-        } else if (diffDays >= 2 && diffDays <= 3) {
-            return score * .85
-        } else if (diffDays >= 4 && diffDays <= 5) {
-            return score * .8;
-        } else if (diffDays > 5) {
-            return score * .75;
-        }
-    } else { // negative difference, submission is on time/early
-        //this will return on time 100% and submissions that are 0's 
-        return score;
-    }
+    // if (!dueDateInput) return score;
+    // const dueDate = dueDateInput instanceof Date
+    //     ? dueDateInput
+    //     : parseISO(typeof dueDateInput === 'string' ? dueDateInput : String(dueDateInput));
+    // const submittedAt = submissionDate instanceof Date
+    //     ? submissionDate
+    //     : parseISO(typeof submissionDate === 'string' ? submissionDate : String(submissionDate));
+    // const diffTime = submittedAt - dueDate;
+    // const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    // if (diffDays > 0 && score !== 0) { //if submission is late and not a 0 
+    //     //1 day late 
+    //     if (diffDays === 1) {
+    //         return score * .9;
+    //     } else if (diffDays >= 2 && diffDays <= 3) {
+    //         return score * .85
+    //     } else if (diffDays >= 4 && diffDays <= 5) {
+    //         return score * .8;
+    //     } else if (diffDays > 5) {
+    //         return score * .75;
+    //     }
+    // } else { // negative difference, submission is on time/early
+    //     //this will return on time 100% and submissions that are 0's 
+    //     return score;
+    // }
+    return score;
 };
 
 const scoreGithubSubmission = async (url, path, assignmentTitle, submittedAt, dueDate) => { //clone student's repo pasted into submission portal
