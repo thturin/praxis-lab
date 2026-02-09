@@ -182,7 +182,7 @@ const upsertGithubSubmission = async (req, res) => {
 
 //UPDATE OR CREATE LAB SUBMISSION WHEN SUBMITTING
 const upsertLabSubmission = async (req, res) => {
-    throw new Error ('Lab submission endpoint is currently disabled until we can stabilize the grading system. Please contact your instructor if you have any questions or concerns about your lab submission.');
+    //throw new Error ('Lab submission endpoint is currently disabled until we can stabilize the grading system. Please contact your instructor if you have any questions or concerns about your lab submission.');
     const { assignmentId, userId, dueDate, score } = req.body;
     const submittedAt = new Date(); //create the submission date
     let finalPercent = calculateLateScore(submittedAt, dueDate, score);
