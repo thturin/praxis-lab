@@ -4,7 +4,7 @@ require('dotenv').config({ path: path.join(__dirname, '..', '..', '..', '.env') 
 const axios = require('axios');
 const { PrismaClient } = require('@prisma/client');
 const { Q1_Variants, Q2_Variants, Q3_Variants } = require('./variants');
-const { computeFinalScore, gradeWithDeepSeek } = require('../services/grading/gradingService');
+const { computeFinalScore, gradeWithBinaryRubric } = require('../services/grading/gradingService');
 
 const labDbUrl = process.env.LABCREATOR_DATABASE_URL || process.env.DATABASE_URL;
 
@@ -71,7 +71,7 @@ const gradeSeedResponses = async (responses, lab) => {
     }
 
     try {
-      const result = await gradeWithDeepSeek({
+      const result = await gradeWithBinaryRubric({
         userAnswer,
         answerKey,
         question,

@@ -120,8 +120,8 @@ const AdminDashboard = ({ user, onLogout }) => {
         //deleteAssignment = {assignmentId:18}
         setSubmissions(prev => prev.filter(ass => Number(ass.assignmentId) !== Number(deleteAssignment.assignmentId)));
         setAssignments(prev => prev.filter(ass => Number(ass.id) !== Number(deleteAssignment.assignmentId)));
-        console.log(assignments);
-        console.log(submissions);
+        // console.log(assignments);
+        // console.log(submissions);
     }
 
     const handleSubmissionUpdate = (newScore) => {

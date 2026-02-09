@@ -48,29 +48,6 @@ const buildBinaryRubricPrompt = ({ userAnswer, answerKey, question, questionType
 };
 
 
-//OLD LOGIC NOT BEING USED ANYMORE
-// Build prompt for DeepSeek grading NON CODING QUESTIONS
-const buildPrompt = ({ userAnswer, answerKey, question, questionType, AIPrompt }) => {
-  const basePrompt = AIPrompt || '';
-
-  return `compare the student's answer to the answer key.
-            Answer Key: ${answerKey}
-            Student Answer: ${userAnswer}
-            Question: ${question}
-            Question Type: ${questionType}
-            AI Prompt: ${basePrompt}.
-            You are an empathetic grading assistant that responds only with a
-            JSON object with EXACTLY { "score": number, "feedback": string }.
-            Compare the student answer to the answer key, look for misconceptions,
-            and explain how to correct them. Mention the specific concept they misunderstood,
-            point toward the right reasoning, and suggest one next step (e.g., revisit a definition or example).
-            Be kind, concise, and avoid grammar penalties. Feedback should be ≤1000 characters.
-            The response will be be in html but ignore all html artifacts and just analyze the text.
-            Is the student's answer correct, give a score from 0 to 1 and a brief feedback.
-            If the response is empty, just respond with 'response is empty' `;
-};
-
-
 // Generate JUnit test prompt
 const buildJUnitTestPrompt = ({ problemDescription, answerKey }) => {
   return `You are a Java testing expert. Create JUnit 5 test code for this programming problem:
@@ -143,4 +120,4 @@ const buildAnalyzeStudentCodePrompt = ({ problemDescription, studentCode, testRe
 };
 
 
-module.exports = { BINARY_RUBRIC, buildBinaryRubricPrompt, buildPrompt, buildJUnitTestPrompt, buildAnalyzeStudentCodePrompt };
+module.exports = { BINARY_RUBRIC, buildBinaryRubricPrompt, buildJUnitTestPrompt, buildAnalyzeStudentCodePrompt };

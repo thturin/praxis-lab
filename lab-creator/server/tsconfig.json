@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "allowJs": true,
+    "checkJs": true,
+    "strict": false,
+    "esModuleInterop": true,
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "outDir": "./dist",
+    "noEmit": true,
+    "skipLibCheck": true
+  },
+  "include": ["./**/*.js", "./**/*.ts"],
+  "exclude": ["node_modules", "uploads", "dist"]
+}

@@ -104,6 +104,7 @@ services:
       - "5556:5555" #for npx prisma studio
     environment:
       DATABASE_URL: ${LABCREATOR_DATABASE_URL}
+      VOYAGER_API_KEY: ${VOYAGER_API_KEY}
       PORTAL_DATABASE_URL: ${PORTAL_DATABASE_URL}
       PORTAL_API_URL: ${PORTAL_API_URL}
       OPENAI_API_KEY: ${OPENAI_API_KEY}

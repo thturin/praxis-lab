@@ -27,10 +27,11 @@ function LabPreview({
 }) {
 
     const isAdmin = mode === 'admin';
- 
+
     const [session, setSession] = useState(createSession(title, username, userId, labId));
-   // const [sessionLoaded, setSessionLoaded] = useState(false);
+    // const [sessionLoaded, setSessionLoaded] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submitError, setSubmitError] = useState('');
 
     const exportSessionToFile = () => {
         const payload = {
@@ -156,6 +157,7 @@ function LabPreview({
 
     const submitResponses = async () => {
         setIsSubmitting(true);
+        setSubmitError('');
         let newGradedResults = { ...session.gradedResults };//create a new grade results to add empty
         //LOOP THROUGH RESPONSES
         for (const [questionId, userAnswer] of Object.entries(responses)) {
@@ -214,10 +216,10 @@ function LabPreview({
                 let response;
 
                 if (type === 'code') { //JAVA CODE GRADING 
-                    console.log('Grading Java code for questionId', questionId, typeof(generatedTestCode));
+                    console.log('Grading Java code for questionId', questionId, typeof (generatedTestCode));
                     response = await axios.post(`${process.env.REACT_APP_API_LAB_HOST}/grade/java`, {
                         userAnswer,
-                        testCode:generatedTestCode,
+                        testCode: generatedTestCode,
                         question
                     });
                     console.log('Java grading response', response.data);
@@ -268,8 +270,8 @@ function LabPreview({
             }
         });
         //CALCULATE FINAL SCORE
-        let newFinalScorePercent;
-        //console.log(newGradedResults);
+        let newFinalScorePercent = 0;
+
         try {
             const response = await axios.post(`${process.env.REACT_APP_API_LAB_HOST}/grade/calculate-score`, {
                 gradedResults: newGradedResults, //use variable instead
@@ -281,35 +283,39 @@ function LabPreview({
             //setSession is asynchronous so doesn't always update before upserting to lab 
             newFinalScorePercent = response.data.session.finalScore.percent;
 
-            //don
+            //update session with new graded results and final score
             setSession(prev => ({
                 ...prev,
                 gradedResults: newGradedResults,
                 finalScore: response.data.session.finalScore
             }));
+
+            //create a lab submission or update it with final score and due date for late penalty calculation in backend. 
+            //only do this if calculate-score is successful
+            if (!isAdmin) {
+                try {
+                    const response = await axios.post(`${process.env.REACT_APP_API_HOST}/submissions/upsertLab`, {
+                        assignmentId,
+                        userId,
+                        dueDate: selectedAssignmentDueDate,
+                        score: newFinalScorePercent
+                    
+                    });
+                    //SESSION SCORE DOES NOT GET UPDATED with late penalty
+                    onUpdateSubmission(response.data);
+                } catch (err) {
+                    console.error('error upsertingLab ', err);
+                    setSubmitError('Submission failed to save. Please try submitting again.');
+                } finally {
+                    setIsSubmitting(false); //stop loading regardless of success/failure
+                }
+            }
         } catch (err) {
             console.error('error calculating final score', err);
+            setSubmitError('Failed to calculate score. Please try submitting again.');
         } finally {
-            if (isAdmin) setIsSubmitting(false);
+            setIsSubmitting(false);
         }
-        //CREATE A LAB TYPE SUBMISSION ONLY IF IT IS A STUDENT
-        if (!isAdmin) {
-            try {
-                const response = await axios.post(`${process.env.REACT_APP_API_HOST}/submissions/upsertLab`, {
-                    assignmentId,
-                    userId,
-                    dueDate: selectedAssignmentDueDate,
-                    score: newFinalScorePercent
-                });
-                //SESSION SCORE DOES NTO GET UPDATED with late penalty
-                onUpdateSubmission(response.data);
-            } catch (err) {
-                console.error('error upsertingLab ', err);
-            } finally {
-                setIsSubmitting(false); //stop loading regardless of success/failure
-            }
-        }
-
     }
 
     return (
@@ -347,7 +353,7 @@ function LabPreview({
                         </div>
                     </div>
                 ))}
-                {mode === 'admin' && !readOnly &&(
+                {mode === 'admin' && !readOnly && (
                     <AIPrompt value={aiPrompt} onChange={handleAiPromptChange} />
                 )}
 
@@ -387,6 +393,12 @@ function LabPreview({
                             )}
                         </button>
                     </>
+                )}
+
+                {submitError && (
+                    <div className="mt-4 p-4 border rounded bg-red-50 text-red-700">
+                        {submitError}
+                    </div>
                 )}
 
                 {/*OUTPUT FINAL SCORE */}

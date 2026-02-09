@@ -26,6 +26,6 @@ services:
 
   lab-creator-api:
     restart: unless-stopped
-    command: npx nodemon app.js
+    command: npx nodemon --exec tsx --ext js,ts,json app.js
     environment:
       NODE_ENV: development

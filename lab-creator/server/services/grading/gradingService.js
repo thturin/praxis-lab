@@ -1,6 +1,6 @@
 const { callLLM } = require('../llm/llmClient');
 const { compileAndRunJavaWithTests } = require('../docker/dockerExecutionService');
-const { BINARY_RUBRIC, buildBinaryRubricPrompt, buildPrompt, buildJUnitTestPrompt, buildAnalyzeStudentCodePrompt } = require('../prompts/gradingPrompts');
+const { buildBinaryRubricPrompt, buildJUnitTestPrompt, buildAnalyzeStudentCodePrompt } = require('../prompts/gradingPrompts');
 const { parseScoreFeedback, parseBinaryRubricResponse, calculateBinaryScore, computeFinalScore } = require('../scoring/scoringService');
 
 
@@ -116,7 +116,6 @@ const gradeJavaCode = async ({ studentCode, problemDescription, testCode }) => {
 }
 
 
-
 const gradeWithBinaryRubric = async ({ userAnswer, answerKey, question, questionType, AIPrompt, timeoutMs = 20000 }) => {
   if (!process.env.DEEPSEEK_API_KEY) {
     throw new Error('DEEPSEEK_API_KEY is not configured');
@@ -151,28 +150,5 @@ const gradeWithBinaryRubric = async ({ userAnswer, answerKey, question, question
 };
 
 
-//Gets called in gradeController.js /deepseek api gradeQuestionDeepSeek and regradeSession
-const gradeWithDeepSeek = async ({ userAnswer, answerKey, question, questionType, AIPrompt, timeoutMs = 20000 }) => {
-  if (!process.env.DEEPSEEK_API_KEY) {
-    throw new Error('DEEPSEEK_API_KEY is not configured');
-  }
-
-  const prompt = buildPrompt({ userAnswer, answerKey, question, questionType, AIPrompt });
-
-  const raw = await callLLM({
-    messages: [
-      { role: 'system', content: 'You are a grading assistant that responds ONLY with a single JSON object.' },
-      { role: 'user', content: prompt },
-    ],
-    temperature: 0.2,
-    maxTokens: 350,
-    responseFormat: { type: 'json_object' },
-    timeout: timeoutMs,
-  });
-  //return { score: 0, feedback: 'Model response malformed or empty' };
-  return parseScoreFeedback(raw);
-};
-
-
-module.exports = { gradeWithBinaryRubric, gradeJavaCode, parseScoreFeedback, buildPrompt, gradeWithDeepSeek, computeFinalScore, generateJUnitTests, parseBinaryRubricResponse, calculateBinaryScore, BINARY_RUBRIC };
+module.exports = { gradeWithBinaryRubric, gradeJavaCode, computeFinalScore, generateJUnitTests };
 
