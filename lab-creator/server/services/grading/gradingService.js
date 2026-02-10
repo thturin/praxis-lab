@@ -116,6 +116,8 @@ const gradeJavaCode = async ({ studentCode, problemDescription, testCode }) => {
 }
 
 
+
+
 const gradeWithBinaryRubric = async ({ userAnswer, answerKey, question, questionType, AIPrompt, timeoutMs = 20000 }) => {
   if (!process.env.DEEPSEEK_API_KEY) {
     throw new Error('DEEPSEEK_API_KEY is not configured');

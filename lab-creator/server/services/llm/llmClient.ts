@@ -29,6 +29,12 @@ interface CallLLMOptions {
   timeout?: number;
 }
 
+interface CallEmbeddingOptions {
+  provider?: string;
+  model?: string;
+  input: [string, string];
+}
+
 async function callLLM({ provider = 'deepseek', model, messages, temperature = 0.2, maxTokens = 500, responseFormat, timeout = 20000 }: CallLLMOptions): Promise<string> {
   const config = PROVIDERS[provider];
   if (!config) throw new Error(`Unknown LLM provider: ${provider}`);
@@ -55,4 +61,26 @@ async function callLLM({ provider = 'deepseek', model, messages, temperature = 0
   return response.data?.choices?.[0]?.message?.content || '';
 }
 
-module.exports = { callLLM };
+async function callEmbeddingModel({ provider = 'voyager', model, input }: CallEmbeddingOptions): Promise<string> {
+  const config = PROVIDERS[provider];
+  if (!config) throw new Error(`Unknown LLM provider: ${provider}`);
+
+  const apiKey = config.getKey();
+  if (!apiKey) throw new Error(`API key not configured for provider: ${provider}`);
+
+  const body = {
+    model: model || config.defaultModel,
+    input,
+  };
+
+  const response = await axios.post(config.url, body, {
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  return response.data?.data?.[0]?.embedding || '';
+}
+
+module.exports = { callLLM, callEmbeddingModel };
