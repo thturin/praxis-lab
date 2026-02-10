@@ -32,7 +32,7 @@
 - [ ] `services/scoring/scoringService.js`
 - [ ] `services/docker/dockerService.js`
 - [ ] `services/docker/dockerJavaService.js`
-- [ ] `services/llm/llmClient.js`
+- [x] `services/llm/llmClient.ts`
 - [ ] `utils/helpers.js`
 - [ ] `scripts/seedFakeSessions.js`
 - [ ] `scripts/importLab.js`

@@ -1,25 +1,42 @@
-const axios = require('axios');
+import axios from 'axios';
 
-const PROVIDERS = {
+interface ProviderConfig {
+  url: string;
+  getKey: () => string | undefined;
+  defaultModel: string;
+}
+
+const PROVIDERS: Record<string, ProviderConfig> = {
   deepseek: {
     url: 'https://api.deepseek.com/chat/completions',
     getKey: () => process.env.DEEPSEEK_API_KEY,
     defaultModel: 'deepseek-chat',
+  },
+  voyager: {
+    url: 'https://api.voyager.ai/v1/chat/embeddings',
+    getKey: () => process.env.VOYAGER_API_KEY,
+    defaultModel: 'voyager-3.5-lite',
   }
 };
 
-/** //
- * 
- * @param {{ provider?: string, model?: string, messages: Array, temperature?: number, maxTokens?: number, responseFormat?: object, timeout?: number }} opts */
+interface CallLLMOptions {
+  provider?: string;
+  model?: string;
+  messages: Array<{ role: string; content: string }>;
+  temperature?: number;
+  maxTokens?: number;
+  responseFormat?: object;
+  timeout?: number;
+}
 
-async function callLLM({ provider = 'deepseek', model, messages, temperature = 0.2, maxTokens = 500, responseFormat, timeout = 20000 }) {
+async function callLLM({ provider = 'deepseek', model, messages, temperature = 0.2, maxTokens = 500, responseFormat, timeout = 20000 }: CallLLMOptions): Promise<string> {
   const config = PROVIDERS[provider];
   if (!config) throw new Error(`Unknown LLM provider: ${provider}`);
 
   const apiKey = config.getKey();
   if (!apiKey) throw new Error(`API key not configured for provider: ${provider}`);
 
-  const body = {
+  const body: Record<string, any> = {
     model: model || config.defaultModel,
     messages,
     temperature,
