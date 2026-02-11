@@ -94,18 +94,16 @@ const buildCosineFeedbackPrompt = ({ userAnswer, answerKey, question, similarity
       YOUR TASK:
       Provide constructive, encouraging feedback that:
       1. Acknowledges the student's correct understanding
-      2. Notes that while the wording differs, the answer captures the key concepts
+      2. Highlights any specific strengths in the answer (e.g., clear explanation, good example)
       3. Optionally suggests minor improvements or clarifications (if any)
       4. Maintains a positive, supportive tone
 
       IMPORTANT:
       - Use "You" not "the student" in feedback
-      - Keep feedback concise (≤500 characters)
+      - Keep feedback concise (<=1000 characters)
       - Focus on correctness and understanding, not on matching exact wording
       - Respond ONLY with valid JSON: { "feedback": string }
 
-      Example feedback tone:
-      "Your answer demonstrates a solid understanding of [concept]. While your explanation differs from the expected wording, you've captured the key ideas correctly. [Optional: minor suggestion]"
       `;
 };
 

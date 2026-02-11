@@ -27,7 +27,7 @@
 - [ ] `routes/gradingRoutes.js`
 - [ ] `routes/fileRoutes.js`
 - [x] `services/grading/gradingService.ts`
-- [ ] `services/prompts/gradingPrompts.js`
+- [x] `services/prompts/gradingPrompts.ts`
 - [ ] `services/prompts/systemPrompts.js`
 - [ ] `services/scoring/scoringService.js`
 - [ ] `services/docker/dockerService.js`

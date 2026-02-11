@@ -1,6 +1,6 @@
 const { callLLM, callEmbeddingModel } = require('../llm/llmClient');
 const { compileAndRunJavaWithTests } = require('../docker/dockerExecutionService');
-const { buildBinaryRubricPrompt, buildJUnitTestPrompt, buildAnalyzeStudentCodePrompt } = require('../prompts/gradingPrompts');
+const { buildBinaryRubricPrompt, buildJUnitTestPrompt, buildAnalyzeStudentCodePrompt, buildCosineFeedbackPrompt } = require('../prompts/gradingPrompts');
 const { parseScoreFeedback, parseBinaryRubricResponse, calculateBinaryScore, computeFinalScore } = require('../scoring/scoringService');
 
 
@@ -231,7 +231,7 @@ const gradeWithBinaryRubric = async ({ userAnswer, answerKey, question, question
     throw new Error('DEEPSEEK_API_KEY is not configured');
   }
 
-  const prompt = buildBinaryRubricPrompt({ userAnswer, answerKey, question, questionType, AIPrompt });
+  let prompt = buildBinaryRubricPrompt({ userAnswer, answerKey, question, questionType, AIPrompt });
   let raw;
   try {
     raw = await callLLM({
@@ -256,45 +256,60 @@ const gradeWithBinaryRubric = async ({ userAnswer, answerKey, question, question
   }
 
   let { score, result, breakdown } = calculateBinaryScore(rubricScores);
-  //second verification with cosine similarity
+  let feedback = rubricScores.feedback;
+
+  // Second verification with cosine similarity if binary rubric failed on answer quality
   if (breakdown.answerQuality !== 'PASS') {
     try {
       const verification = await verifyWithCosineSimilarity(userAnswer, answerKey);
       console.log('Cosine similarity verification result:', verification);
+
       if (verification.answerQuality === 'PASS') {
-        //update score, result and breakdown answerQuality
-        score = 1; // If LLM failed but cosine similarity passed
+        console.log(`Overriding binary rubric with cosine similarity (${verification.similarity.toFixed(3)})`);
+
+        // Update score, result and breakdown answerQuality
+        score = 1;
         result = 'PASS';
         breakdown.answerQuality = 'PASS';
+
+        // Generate constructive feedback using the new prompt
+        //only the feedback will be updated here.
+        try {
+          prompt = buildCosineFeedbackPrompt({
+            userAnswer,
+            answerKey,
+            question,
+            similarity: verification.similarity
+          });
+
+          const feedbackRaw = await callLLM({
+            messages: [
+              { role: 'system', content: 'You are an empathetic grading assistant that responds ONLY with JSON.' },
+              { role: 'user', content: prompt },
+            ],
+            temperature: 0.3,
+            maxTokens: 300,
+            responseFormat: { type: 'json_object' },
+            timeout: timeoutMs,
+          });
+
+          const feedbackResponse = JSON.parse(feedbackRaw);
+          feedback = feedbackResponse.feedback || 'Your answer demonstrates correct understanding of the key concepts.';
+
+        } catch (err) {
+          console.error('Error generating cosine similarity feedback:', err.response?.data || err.message);
+          feedback = 'Your answer demonstrates correct understanding of the key concepts, though expressed differently than the expected response.';
+        }
       }
     } catch (err) {
       console.error('Error during cosine similarity verification:', err.response?.data || err.message);
     }
-
-    //now you have to rerun the LLM 
-    try {
-      raw = await callLLM({
-        messages: [
-          { role: 'system', content: 'You are a fair grading assistant that responds ONLY with JSON.' },
-          { role: 'user', content: prompt },
-        ],
-        temperature: 0.2,
-        maxTokens: 400,
-        responseFormat: { type: 'json_object' },
-        timeout: timeoutMs,
-      });
-    } catch (err) {
-      console.error('Error calling LLM for grading:', err.response?.data || err.message);
-      return { score: 0, result: 'FAIL', feedback: 'Error during grading process', breakdown: null };
-    }
-
   }
-
 
   return {
     score,
     result,
-    feedback: rubricScores.feedback,
+    feedback,
     breakdown
   };
 };

@@ -106,8 +106,6 @@ async function callEmbeddingModel({ provider = 'voyager', model, input }: CallEm
     input,
   };
 
-  console.log('========================Calling embedding model with:', input);
-
   try{
   const response = await axios.post(config.url, body, {
     headers: {

@@ -65,21 +65,7 @@ const gradeQuestionDeepSeek = async (req: Request, res: Response) => {
     const parsedUserAnswer = parseTextFromHtml(userAnswer);
     const parsedAnswerKey = parseTextFromHtml(answerKey);
     const parsedQuestion = parseTextFromHtml(question);
-    try {
-        const result = await calculateEmbeddingSimilarity(parsedUserAnswer, parsedAnswerKey);
-        console.log('Calculated embedding similarity:', result);
-        if (result >= 0.8) {
-            return res.json({ score: 1, feedback: 'Answer is very similar to the answer key; awarding full credit' });
-        } else if (result>= 0.5) {
-            return res.json({ score: 0.5, feedback: 'Answer is somewhat similar to the answer key; awarding partial credit' });
-        } else {
-            return res.json({ score: 0, feedback: 'Answer is not similar to the answer key; awarding no credit' });
-        }
-    } catch (err) { 
-        console.error('Error calculating embedding similarity', err);
-    }
-
-    //skip for now
+   
     try {
         const result = await gradeWithBinaryRubric({ userAnswer: parsedUserAnswer, answerKey: parsedAnswerKey, question: parsedQuestion, questionType, AIPrompt });
         // const result = await gradeWithDeepSeek({ userAnswer, answerKey, question, questionType, AIPrompt });
