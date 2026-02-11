@@ -45,8 +45,8 @@ const parseBinaryRubricResponse = (raw) => {
 
 const calculateBinaryScore = (rubricScores) => {
   const allPass =
-    rubricScores.answerQuality === 'pass' &&
-    rubricScores.compliance === 'pass';
+    rubricScores.answerQuality === 'PASS' &&
+    rubricScores.compliance === 'PASS';
 
   const score = allPass ? 1.0 : 0.0;
   const result = allPass ? 'PASS' : 'FAIL';

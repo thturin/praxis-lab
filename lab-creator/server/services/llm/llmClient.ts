@@ -13,9 +13,9 @@ const PROVIDERS: Record<string, ProviderConfig> = {
     defaultModel: 'deepseek-chat',
   },
   voyager: {
-    url: 'https://api.voyager.ai/v1/chat/embeddings',
+    url: 'https://api.voyageai.com/v1/embeddings',
     getKey: () => process.env.VOYAGER_API_KEY,
-    defaultModel: 'voyager-3.5-lite',
+    defaultModel: 'voyage-3-lite',
   }
 };
 
@@ -61,7 +61,40 @@ async function callLLM({ provider = 'deepseek', model, messages, temperature = 0
   return response.data?.choices?.[0]?.message?.content || '';
 }
 
-async function callEmbeddingModel({ provider = 'voyager', model, input }: CallEmbeddingOptions): Promise<string> {
+// Separate function for calling embedding models 
+//returns  the two items in the data list as arrays of numbers (the embeddings for the two input texts)
+// {
+//   "object": "list",
+//   "data": [
+//     {
+//       "object": "embedding",
+//       "embedding": [
+//         -0.016709786,
+//         0.026996311,
+//         -0.027496673,
+//         "...",
+//         -0.012125067
+//       ],
+//       "index": 0
+//     },
+//     {
+//       "object": "embedding",
+//       "embedding": [
+//         0.003613521,
+//         0.026428301,
+//         -0.009491397,
+//         "...",
+//         -0.028471239
+//       ],
+//       "index": 1
+//     }
+//   ],
+//   "model": "voyage-4-large",
+//   "usage": {
+//     "total_tokens": 8
+//   }
+// }
+async function callEmbeddingModel({ provider = 'voyager', model, input }: CallEmbeddingOptions): Promise<[number[], number[]]> {
   const config = PROVIDERS[provider];
   if (!config) throw new Error(`Unknown LLM provider: ${provider}`);
 
@@ -73,6 +106,9 @@ async function callEmbeddingModel({ provider = 'voyager', model, input }: CallEm
     input,
   };
 
+  console.log('========================Calling embedding model with:', input);
+
+  try{
   const response = await axios.post(config.url, body, {
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -80,7 +116,13 @@ async function callEmbeddingModel({ provider = 'voyager', model, input }: CallEm
     },
   });
 
-  return response.data?.data?.[0]?.embedding || '';
+  const data = response.data?.data;
+  return [data?.[0]?.embedding || [], data?.[1]?.embedding || []];
+  }catch(err){
+    console.error('Error calling embedding model:', err.response?.data);
+    throw err;
+  }
+
 }
 
 module.exports = { callLLM, callEmbeddingModel };

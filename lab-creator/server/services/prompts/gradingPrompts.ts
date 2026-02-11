@@ -1,16 +1,38 @@
 const { BINARY_RUBRIC } = require('./rubrics');
 
+interface BuildBinaryRubricPromptParams {
+  userAnswer: string;
+  answerKey: string;
+  question: string;
+  questionType: string;
+  AIPrompt: string;
+}
 
+interface BuildJUnitTestPromptParams {
+  problemDescription: string;
+  answerKey: string;
+}
 
+interface BuildAnalyzeStudentCodePromptParams {
+  problemDescription: string;
+  studentCode: string;
+  testResults: { total: number; passed: number; failed: number };
+  testOutput: string;
+}
 
-
+interface BuildCosineFeedbackPromptParams {
+  userAnswer: string;
+  answerKey: string;
+  question: string;
+  similarity: number;
+}
 
 //Updated prompt to reduce hallucinations by removing subjective language and adding explicit "grade only what's written" constraint
-const buildBinaryRubricPrompt = ({ userAnswer, answerKey, question, questionType, AIPrompt }) => {
+const buildBinaryRubricPrompt = ({ userAnswer, answerKey, question, questionType, AIPrompt }: BuildBinaryRubricPromptParams): string => {
   const rubric = BINARY_RUBRIC;
 
   let rubricSection = `\nGRADING RUBRIC (Binary Pass/Fail - ALL must pass):\n\n`;
-  rubric.criteria.forEach((criterion, idx) => {
+  rubric.criteria.forEach((criterion: { name: string; description: string }, idx: number) => {
     rubricSection += `${idx + 1}. ${criterion.name}:\n   ${criterion.description}\n\n`;
   });
 
@@ -52,9 +74,43 @@ const buildBinaryRubricPrompt = ({ userAnswer, answerKey, question, questionType
 
 };
 
+// Prompt for generating constructive feedback after cosine similarity verification
+const buildCosineFeedbackPrompt = ({ userAnswer, answerKey, question, similarity }: BuildCosineFeedbackPromptParams): string => {
+  return `You are an empathetic grading assistant providing feedback on a student's answer.
+
+      QUESTION:
+      ${question}
+
+      ANSWER KEY/EXPECTED RESPONSE:
+      ${answerKey}
+
+      STUDENT'S ANSWER:
+      ${userAnswer}
+
+      CONTEXT:
+      This answer has been verified as semantically correct using embedding similarity analysis (similarity score: ${similarity.toFixed(3)}).
+      While the wording differs from the answer key, the core concepts and meaning are equivalent.
+
+      YOUR TASK:
+      Provide constructive, encouraging feedback that:
+      1. Acknowledges the student's correct understanding
+      2. Notes that while the wording differs, the answer captures the key concepts
+      3. Optionally suggests minor improvements or clarifications (if any)
+      4. Maintains a positive, supportive tone
+
+      IMPORTANT:
+      - Use "You" not "the student" in feedback
+      - Keep feedback concise (≤500 characters)
+      - Focus on correctness and understanding, not on matching exact wording
+      - Respond ONLY with valid JSON: { "feedback": string }
+
+      Example feedback tone:
+      "Your answer demonstrates a solid understanding of [concept]. While your explanation differs from the expected wording, you've captured the key ideas correctly. [Optional: minor suggestion]"
+      `;
+};
 
 // Generate JUnit test prompt
-const buildJUnitTestPrompt = ({ problemDescription, answerKey }) => {
+const buildJUnitTestPrompt = ({ problemDescription, answerKey }: BuildJUnitTestPromptParams): string => {
   return `You are a Java testing expert. Create JUnit 5 test code for this programming problem:
 
             Problem Description:
@@ -91,7 +147,7 @@ const buildJUnitTestPrompt = ({ problemDescription, answerKey }) => {
 
 
 // Analyze student code prompt for score and feedback
-const buildAnalyzeStudentCodePrompt = ({ problemDescription, studentCode, testResults, testOutput }) => {
+const buildAnalyzeStudentCodePrompt = ({ problemDescription, studentCode, testResults, testOutput }: BuildAnalyzeStudentCodePromptParams): string => {
   return `Grade this Java programming submission:
 
             Problem: ${problemDescription}
@@ -125,4 +181,10 @@ const buildAnalyzeStudentCodePrompt = ({ problemDescription, studentCode, testRe
 };
 
 
-module.exports = { BINARY_RUBRIC, buildBinaryRubricPrompt, buildJUnitTestPrompt, buildAnalyzeStudentCodePrompt };
+module.exports = {
+  BINARY_RUBRIC,
+  buildBinaryRubricPrompt,
+  buildJUnitTestPrompt,
+  buildAnalyzeStudentCodePrompt,
+  buildCosineFeedbackPrompt
+};

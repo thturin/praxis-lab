@@ -20,13 +20,13 @@
 - [ ] `app.js`
 - [ ] `controllers/labController.js`
 - [ ] `controllers/questionController.js`
-- [ ] `controllers/gradingController.js`
+- [x] `controllers/gradeController.ts`
 - [ ] `controllers/fileController.js`
 - [ ] `routes/labRoutes.js`
 - [ ] `routes/questionRoutes.js`
 - [ ] `routes/gradingRoutes.js`
 - [ ] `routes/fileRoutes.js`
-- [ ] `services/grading/gradingService.js`
+- [x] `services/grading/gradingService.ts`
 - [ ] `services/prompts/gradingPrompts.js`
 - [ ] `services/prompts/systemPrompts.js`
 - [ ] `services/scoring/scoringService.js`
