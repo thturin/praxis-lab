@@ -134,15 +134,29 @@ const worker = new Worker('submission-regrade', async job => {
                 const { aiPrompt, blocks = [] } = labResponse.data;
 
                 //filter all questions and sub questions into a single array
-                const allQuestions = blocks.flatMap(block => {
-                    if (block.blockType !== 'question') return [];
+                const allQuestions = [];
+
+                blocks.forEach(block => {
+                    if (block.blockType !== 'question') return;
+
                     const scoredSubQuestions = (block.subQuestions || []).filter(sq => sq.isScored);
+
                     if (scoredSubQuestions?.length) {
-                        return scoredSubQuestions;
+                        // Add sub-questions with parent prompt included
+                        scoredSubQuestions.forEach(sq => {
+                            allQuestions.push({
+                                ...sq,
+                                prompt: block.prompt
+                                    ? `${block.prompt}\n\n${sq.prompt}`
+                                    : sq.prompt
+                            });
+                        });
                     } else {
-                        if (block.isScored) return block;
+                        // Regular question (no sub-questions)
+                        if (block.isScored) {
+                            allQuestions.push(block);
+                        }
                     }
-                    return [];
                 });
 
                 //create a new array of objects that contain the prompt, key, type, and generatedTestCode

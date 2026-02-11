@@ -186,7 +186,11 @@ function LabPreview({
                     for (const sq of block.subQuestions) {
                         if (sq.id === questionId && sq.isScored) {
                             answerKey = sq.key || sq.explanation || '';
-                            question = sq.prompt;
+                            // Prepend parent prompt to provide context for grading
+                            const mainPrompt = block.prompt || '';
+                            question = mainPrompt
+                                ? `${mainPrompt}\n\n${sq.prompt}`
+                                : sq.prompt;
                             type = sq.type;
                             generatedTestCode = sq.generatedTestCode || '';
                             break;

@@ -282,7 +282,7 @@ const gradeWithBinaryRubric = async ({ userAnswer, answerKey, question, question
             similarity: verification.similarity
           });
 
-          const feedbackRaw = await callLLM({
+          raw = await callLLM({
             messages: [
               { role: 'system', content: 'You are an empathetic grading assistant that responds ONLY with JSON.' },
               { role: 'user', content: prompt },
@@ -293,7 +293,7 @@ const gradeWithBinaryRubric = async ({ userAnswer, answerKey, question, question
             timeout: timeoutMs,
           });
 
-          const feedbackResponse = JSON.parse(feedbackRaw);
+          const feedbackResponse = JSON.parse(raw);
           feedback = feedbackResponse.feedback || 'Your answer demonstrates correct understanding of the key concepts.';
 
         } catch (err) {
