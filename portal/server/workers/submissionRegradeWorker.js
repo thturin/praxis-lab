@@ -143,6 +143,7 @@ const worker = new Worker('submission-regrade', async job => {
 
                     if (scoredSubQuestions?.length) {
                         // Add sub-questions with parent prompt included
+                        //ADD MAIN QUESTION PROMPT TO EACH SUB QUESTION TO PROVIDE MORE CONTEXT FOR GRADING
                         scoredSubQuestions.forEach(sq => {
                             allQuestions.push({
                                 ...sq,
