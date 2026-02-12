@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const {generateTestsForJavaQuestion,gradeJavaCodeDeepSeek, gradeSession,regradeSession,gradeQuestionDeepSeek,calculateScore,gradeQuestionOllama } = require('../controllers/gradeController');
+const {generateTestsForJavaQuestion,gradeJavaCodeDeepSeek,regradeSession,gradeQuestionDeepSeek,calculateScore,gradeQuestionOllama } = require('../controllers/gradeController');
 
 
 //ROOT localhost:4000/api/grade

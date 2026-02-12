@@ -31,6 +31,6 @@ COPY . .
 
 EXPOSE 4000
 
-# CMD ["npx","nodemon", "app.js"]
-# Production run: plain node (nodemon is provided via docker-compose.override.yml for local dev)
-CMD ["node", "app.js"]
+# Production run: use tsx to handle TypeScript
+# Development uses nodemon with tsx via docker-compose.override.yml
+CMD ["npx", "tsx", "app.js"]

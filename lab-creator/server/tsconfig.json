@@ -9,9 +9,12 @@
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "outDir": "./dist",
-    "noEmit": true,
-    "skipLibCheck": true
+    "rootDir": "./",
+    "noEmit": false,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "sourceMap": true
   },
   "include": ["./**/*.js", "./**/*.ts"],
-  "exclude": ["node_modules", "uploads", "dist"]
+  "exclude": ["node_modules", "uploads", "dist", "tmp"]
 }
