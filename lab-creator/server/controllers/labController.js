@@ -122,4 +122,4 @@ const updateLabPrompt = async (req, res) => {
     }
 };
 
-module.exports = {updateLabPrompt, upsertLab, loadLab, getLabs, deleteLab, getLab, updateLabPrompt };
+module.exports = {updateLabPrompt, upsertLab, loadLab, getLabs, deleteLab, getLab };

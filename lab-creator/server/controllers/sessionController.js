@@ -176,7 +176,6 @@ const loadSession = async (req, res) => {
                     username,
                     responses: {},
                     gradedResults: {},
-                    gradedResults: {},
                     finalScore: {},
                 }
             });

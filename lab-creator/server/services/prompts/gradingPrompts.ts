@@ -1,4 +1,4 @@
-const { BINARY_RUBRIC } = require('./rubrics');
+export const { BINARY_RUBRIC } = require('./rubrics');
 
 interface BuildBinaryRubricPromptParams {
   userAnswer: string;
@@ -28,7 +28,7 @@ interface BuildCosineFeedbackPromptParams {
 }
 
 //Updated prompt to reduce hallucinations by removing subjective language and adding explicit "grade only what's written" constraint
-const buildBinaryRubricPrompt = ({ userAnswer, answerKey, question, questionType, AIPrompt }: BuildBinaryRubricPromptParams): string => {
+export const buildBinaryRubricPrompt = ({ userAnswer, answerKey, question, questionType, AIPrompt }: BuildBinaryRubricPromptParams): string => {
   const rubric = BINARY_RUBRIC;
 
   let rubricSection = `\nGRADING RUBRIC (Binary Pass/Fail - ALL must pass):\n\n`;
@@ -75,7 +75,7 @@ const buildBinaryRubricPrompt = ({ userAnswer, answerKey, question, questionType
 };
 
 // Prompt for generating constructive feedback after cosine similarity verification
-const buildCosineFeedbackPrompt = ({ userAnswer, answerKey, question, similarity }: BuildCosineFeedbackPromptParams): string => {
+export const buildCosineFeedbackPrompt = ({ userAnswer, answerKey, question, similarity }: BuildCosineFeedbackPromptParams): string => {
   return `You are an empathetic grading assistant providing feedback on a student's answer.
 
       QUESTION:
@@ -108,7 +108,7 @@ const buildCosineFeedbackPrompt = ({ userAnswer, answerKey, question, similarity
 };
 
 // Generate JUnit test prompt
-const buildJUnitTestPrompt = ({ problemDescription, answerKey }: BuildJUnitTestPromptParams): string => {
+export const buildJUnitTestPrompt = ({ problemDescription, answerKey }: BuildJUnitTestPromptParams): string => {
   return `You are a Java testing expert. Create JUnit 5 test code for this programming problem:
 
             Problem Description:
@@ -145,7 +145,7 @@ const buildJUnitTestPrompt = ({ problemDescription, answerKey }: BuildJUnitTestP
 
 
 // Analyze student code prompt for score and feedback
-const buildAnalyzeStudentCodePrompt = ({ problemDescription, studentCode, testResults, testOutput }: BuildAnalyzeStudentCodePromptParams): string => {
+export const buildAnalyzeStudentCodePrompt = ({ problemDescription, studentCode, testResults, testOutput }: BuildAnalyzeStudentCodePromptParams): string => {
   return `Grade this Java programming submission:
 
             Problem: ${problemDescription}
@@ -179,10 +179,3 @@ const buildAnalyzeStudentCodePrompt = ({ problemDescription, studentCode, testRe
 };
 
 
-module.exports = {
-  BINARY_RUBRIC,
-  buildBinaryRubricPrompt,
-  buildJUnitTestPrompt,
-  buildAnalyzeStudentCodePrompt,
-  buildCosineFeedbackPrompt
-};

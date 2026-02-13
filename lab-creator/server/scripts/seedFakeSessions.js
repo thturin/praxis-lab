@@ -1,10 +1,12 @@
+// @ts-nocheck
 const path = require('path');
 // Load envs from repo root (.env) so Docker/compose values are reused
 require('dotenv').config({ path: path.join(__dirname, '..', '..', '..', '.env') });
 const axios = require('axios');
 const { PrismaClient } = require('@prisma/client');
 const { Q1_Variants, Q2_Variants, Q3_Variants } = require('./variants');
-const { computeFinalScore, gradeWithBinaryRubric } = require('../services/grading/gradingService');
+const { gradeWithBinaryRubric } = require('../services/grading/gradingService');
+const { computeFinalScore } = require('../services/scoring/scoringService');
 
 const labDbUrl = process.env.LABCREATOR_DATABASE_URL || process.env.DATABASE_URL;
 

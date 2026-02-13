@@ -44,16 +44,16 @@ interface CosineSimilarityVerification {
 }
 
 //=============Embedded Model=============
-const calculateEmbeddingSimilarity = async (text1: string, text2: string): Promise<number> => {
+export const calculateEmbeddingSimilarity = async (text1: string, text2: string): Promise<number> => {
   try {
-    console.log('==============look here', [text1, text2]);
+    //console.log('==============look here', [text1, text2]);
     const embedding = await callEmbeddingModel({ input: [text1, text2] });
     // Calculate cosine similarity between the two embeddings
     //cosine similarity = (A . B) / (||A|| * ||B||)
     // dot product (A*B) => extracts the similarities of the two vectors. IT ignores the differences
     //refer to this video https://www.youtube.com/watch?v=FrDAU2N0FEg&t=369s
     //(||A|| * ||B||) => normalizes the dot product to a value -1 to 1.
-
+    console.log(embedding[0],embedding[1]);
     //const dotProduct = embedding[0].reduce((sum, value, i) => sum + value * embedding[1][i], 0);
     //The dot product is: A[0]*B[0] + A[1]*B[1] + A[2]*B[2] + ...
     let dotProduct = 0;
@@ -93,7 +93,7 @@ const calculateEmbeddingSimilarity = async (text1: string, text2: string): Promi
 
 ///=============CODE QUESTIONS GRADING WITH JUNIT TESTS + LLM FEEDBACK ANALYSIS =============
 // Generate JUnit test code using LLM
-const generateJUnitTests = async ({ problemDescription, answerKey }: GenerateJUnitTestsParams): Promise<string> => {
+export const generateJUnitTests = async ({ problemDescription, answerKey }: GenerateJUnitTestsParams): Promise<string> => {
   console.log('=== generateJUnitTests START ===');
   const prompt = buildJUnitTestPrompt({ problemDescription, answerKey });
 
@@ -151,7 +151,7 @@ const generateJUnitTests = async ({ problemDescription, answerKey }: GenerateJUn
 };
 
 // Analyze student code and test results to provide score and feedback
-const analyzeStudentCode = async ({ problemDescription, studentCode, testResults, testOutput }: AnalyzeStudentCodeParams) => {
+export const analyzeStudentCode = async ({ problemDescription, studentCode, testResults, testOutput }: AnalyzeStudentCodeParams) => {
   const prompt = buildAnalyzeStudentCodePrompt({ problemDescription, studentCode, testResults, testOutput });
   console.log('PROMPT', prompt);
 
@@ -172,7 +172,7 @@ const analyzeStudentCode = async ({ problemDescription, studentCode, testResults
 };
 
 //java type question grading with deepseek api
-const gradeJavaCode = async ({ studentCode, problemDescription, testCode }: GradeJavaCodeParams) => {
+export const gradeJavaCode = async ({ studentCode, problemDescription, testCode }: GradeJavaCodeParams) => {
 
   try {
     //2. execute student code against generated tests in docker sandbox
@@ -208,7 +208,7 @@ const gradeJavaCode = async ({ studentCode, problemDescription, testCode }: Grad
 //=============NON-CODING QUESTIONS GRADING WITH DEEPSEEK API USING BINARY RUBRIC METHOD =============
 //non-coding question grading with deepseek API using binary rubric method
 
-const verifyWithCosineSimilarity = async (userAnswer: string, answerKey: string): Promise<CosineSimilarityVerification> => {
+export const verifyWithCosineSimilarity = async (userAnswer: string, answerKey: string): Promise<CosineSimilarityVerification> => {
   try {
     const similarity = await calculateEmbeddingSimilarity(userAnswer, answerKey);
     console.log('Cosine similarity verification:', similarity);
@@ -226,7 +226,7 @@ const verifyWithCosineSimilarity = async (userAnswer: string, answerKey: string)
   }
 }
 
-const gradeWithBinaryRubric = async ({ userAnswer, answerKey, question, questionType, AIPrompt, timeoutMs = 20000 }: GradeWithBinaryRubricParams): Promise<GradingResult> => {
+export const gradeWithBinaryRubric = async ({ userAnswer, answerKey, question, questionType, AIPrompt, timeoutMs = 20000 }: GradeWithBinaryRubricParams): Promise<GradingResult> => {
   if (!process.env.DEEPSEEK_API_KEY) {
     throw new Error('DEEPSEEK_API_KEY is not configured');
   }
@@ -314,4 +314,6 @@ const gradeWithBinaryRubric = async ({ userAnswer, answerKey, question, question
   };
 };
 
-module.exports = { gradeWithBinaryRubric, gradeJavaCode, computeFinalScore, generateJUnitTests, calculateEmbeddingSimilarity };
+
+
+//module.exports = { gradeWithBinaryRubric, gradeJavaCode, computeFinalScore, generateJUnitTests, calculateEmbeddingSimilarity };

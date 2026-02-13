@@ -1,6 +1,7 @@
 require('dotenv').config();
 const { PrismaClient } = require('@prisma/client');
-const { gradeWithBinaryRubric, calculateEmbeddingSimilarity, generateJUnitTests, computeFinalScore, gradeJavaCode } = require('../services/grading/gradingService');
+const { gradeWithBinaryRubric, calculateEmbeddingSimilarity, generateJUnitTests, gradeJavaCode } = require('../services/grading/gradingService');
+const { computeFinalScore } = require('../services/scoring/scoringService');
 const { parseCodeFromHtml, parseTextFromHtml } = require('../utils/parseHtml');
 const prisma = new PrismaClient();
 
@@ -9,7 +10,7 @@ import type { Request, Response } from 'express';
 //calculate final score from gradingService computerFinalScore and update session
 //called from frontend after all questions graded
 // also called from regradeSession after regrading
-const calculateScore = async (req: Request, res: Response) => {
+export const calculateScore = async (req: Request, res: Response) => {
     console.log('--------calculating score-----------');
     console.time('calculateScore');
     const { gradedResults, labId, userId } = req.body;
@@ -31,7 +32,7 @@ const calculateScore = async (req: Request, res: Response) => {
     }
 };
 
-const generateTestsForJavaQuestion = async (req: Request, res: Response) => {
+export const generateTestsForJavaQuestion = async (req: Request, res: Response) => {
     const { problemDescription, answerKey } = req.body;
     const parsedProblemDescription = parseTextFromHtml(problemDescription);
     const parsedAnswerKey = parseCodeFromHtml(answerKey);
@@ -52,7 +53,7 @@ const generateTestsForJavaQuestion = async (req: Request, res: Response) => {
 //grade a single question using DeepSeek API
 //filters out empty answers and missing answer keys
 //calls gradeWithDeepseek from gradingService
-const gradeQuestionDeepSeek = async (req: Request, res: Response) => {
+export const gradeQuestionDeepSeek = async (req: Request, res: Response) => {
     const { userAnswer, answerKey, question, questionType, AIPrompt } = req.body;
     const hasUserAnswer = Boolean(userAnswer && userAnswer.trim().length > 0);
     const hasAnswerKey = Boolean(answerKey && answerKey.trim().length > 0);
@@ -76,7 +77,7 @@ const gradeQuestionDeepSeek = async (req: Request, res: Response) => {
     }
 };
 
-const gradeJavaCodeDeepSeek = async (req: Request, res: Response) => {
+export const gradeJavaCodeDeepSeek = async (req: Request, res: Response) => {
     const { userAnswer, testCode, question } = req.body;
 
     try {
@@ -97,7 +98,7 @@ const gradeJavaCodeDeepSeek = async (req: Request, res: Response) => {
 };
 
 //CURRENTLY NOT IMPLEMENTED
-const gradeSession = async (req: Request, res: Response) => {
+export const gradeSession = async (req: Request, res: Response) => {
     // Placeholder function for grading a session
     //this was creating in respect to making grading a session (student facing) in a worker
     //When the time comes to implement it, we can add the logic here
@@ -107,7 +108,7 @@ const gradeSession = async (req: Request, res: Response) => {
 //this is called asynchronously with redis
 //YOU ARE NOW USING A PARSED VERSION OF THE HTML
 //THIS MIGHT CAUSE ISSUES IN THE FUTURE? DONT FORGET
-const regradeSession = async (req: Request, res: Response) => {
+export const regradeSession = async (req: Request, res: Response) => {
     const { labId, userId, responses, questionLookup, dryRun = true, aiPrompt, includeLatePenalty = false } = req.body;
     if (!labId || !userId || !responses || !questionLookup) {
         return res.status(400).json({ error: 'labId, userId, responses, questionLookup are required' });
@@ -199,7 +200,7 @@ const regradeSession = async (req: Request, res: Response) => {
 };
 
 /// USELESS WITHOUT BETTER HARDWARE
-const gradeQuestionOllama = async (req: Request, res: Response) => {
+export const gradeQuestionOllama = async (req: Request, res: Response) => {
     // const ollamaHost = process.env.OLLAMA_HOST;
     // try {
     //     const { model = 'deepseek-coder:6.7b', temperature = 0.2, userAnswer, answerKey, question, questionType, AIPrompt } = req.body;
@@ -232,4 +233,4 @@ const gradeQuestionOllama = async (req: Request, res: Response) => {
 };
 
 
-module.exports = { generateTestsForJavaQuestion, gradeJavaCodeDeepSeek, gradeSession, regradeSession, gradeQuestionDeepSeek, calculateScore, gradeQuestionOllama };
+//module.exports = { generateTestsForJavaQuestion, gradeJavaCodeDeepSeek, gradeSession, regradeSession, gradeQuestionDeepSeek, calculateScore, gradeQuestionOllama };

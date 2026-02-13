@@ -4,6 +4,7 @@
 - **Strictness:** Relaxed (`strict: false`, allow implicit any — tighten later)
 - **Backend runtime:** `tsx` (runs .ts files directly, no compile step)
 - **Strategy:** Set up TS alongside JS, convert files incrementally over time
+- **Production:** Once migration is complete, add a `tsc` build step in Dockerfile and run compiled JS with `node dist/app.js` instead of `tsx`
 
 ---
 
@@ -24,12 +25,12 @@
 - [ ] `controllers/fileController.js`
 - [ ] `routes/labRoutes.js`
 - [ ] `routes/questionRoutes.js`
-- [ ] `routes/gradingRoutes.js`
+- [x] `routes/gradeRoutes.ts`
 - [ ] `routes/fileRoutes.js`
 - [x] `services/grading/gradingService.ts`
 - [x] `services/prompts/gradingPrompts.ts`
 - [ ] `services/prompts/systemPrompts.js`
-- [ ] `services/scoring/scoringService.js`
+- [x] `services/scoring/scoringService.ts`
 - [ ] `services/docker/dockerService.js`
 - [ ] `services/docker/dockerJavaService.js`
 - [x] `services/llm/llmClient.ts`
