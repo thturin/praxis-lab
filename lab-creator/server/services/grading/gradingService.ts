@@ -87,6 +87,7 @@ export const calculateEmbeddingSimilarity = async (text1: string, text2: string)
     // Below 0.5: Weak or no semantic relationship.
   } catch (err) {
     console.error('Error calculating embedding similarity', err.response?.data);
+    console.error(err.response?.message);
     return 0; // Return 0 similarity on error to avoid false positives
   }
 }
