@@ -16,6 +16,11 @@ const PROVIDERS: Record<string, ProviderConfig> = {
     url: 'https://api.voyageai.com/v1/embeddings',
     getKey: () => process.env.VOYAGER_API_KEY,
     defaultModel: 'voyage-3-lite',
+  },
+  kevin: {
+    url: 'https://chat.sparky.host/v1/chat/completions',
+    getKey: () => process.env.BOXY_API_KEY,
+    defaultModel: 'justinjja/gpt-oss-120b-Derestricted-MXFP4',
   }
 };
 
@@ -26,6 +31,7 @@ interface CallLLMOptions {
   temperature?: number;
   maxTokens?: number;
   responseFormat?: object;
+  tools?: Array<{ type: string; function: { name: string; description?: string; parameters: object } }>;
   timeout?: number;
 }
 
@@ -35,7 +41,7 @@ interface CallEmbeddingOptions {
   input: [string, string];
 }
 
-async function callLLM({ provider = 'deepseek', model, messages, temperature = 0.2, maxTokens = 500, responseFormat, timeout = 20000 }: CallLLMOptions): Promise<string> {
+async function callLLM({ provider = 'deepseek', model, messages, temperature = 0.2, maxTokens = 500, responseFormat, tools, timeout = 20000 }: CallLLMOptions): Promise<string> {
   const config = PROVIDERS[provider];
   if (!config) throw new Error(`Unknown LLM provider: ${provider}`);
 
@@ -49,14 +55,23 @@ async function callLLM({ provider = 'deepseek', model, messages, temperature = 0
     max_tokens: maxTokens,
   };
   if (responseFormat) body.response_format = responseFormat;
+  if (tools) {
+    body.tools = tools;
+    body.tool_choice = { type: 'function', function: { name: tools[0].function.name } };
+  }
 
   const response = await axios.post(config.url, body, {
     headers: {
       Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
+      'Content-Type': 'application/json'
     },
     timeout,
   });
+
+  // If tools were used, extract the function call arguments
+  if (tools) {
+    return response.data?.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments || '';
+  }
 
   return response.data?.choices?.[0]?.message?.content || '';
 }

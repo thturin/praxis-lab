@@ -1,7 +1,7 @@
 const { callLLM, callEmbeddingModel } = require('../llm/llmClient');
 const { compileAndRunJavaWithTests } = require('../docker/dockerExecutionService');
 const { buildBinaryRubricPrompt, buildJUnitTestPrompt, buildAnalyzeStudentCodePrompt, buildCosineFeedbackPrompt } = require('../prompts/gradingPrompts');
-const { parseScoreFeedback, parseBinaryRubricResponse, calculateBinaryScore, computeFinalScore } = require('../scoring/scoringService');
+const { calculateBinaryScore } = require('../scoring/scoringService');
 
 
 interface GenerateJUnitTestsParams {
@@ -72,6 +72,7 @@ export const calculateEmbeddingSimilarity = async (text1: string, text2: string)
     for (let i = 0; i < embedding[1].length; i++) {
       magnitudeB += embedding[1][i] * embedding[1][i];
     }
+
     magnitudeB = Math.sqrt(magnitudeB);
 
     if (magnitudeA === 0 || magnitudeB === 0) return 0; // Avoid division by zero
@@ -159,12 +160,22 @@ export const analyzeStudentCode = async ({ problemDescription, studentCode, test
 
   const raw = await callLLM({
     messages: [
-      { role: 'system', content: 'You are an empathetic Java instructor. Respond only with JSON.' },
+      { role: 'system', content: 'You are an empathetic Java instructor.' },
       { role: 'user', content: prompt }
     ],
     temperature: 0.3,
     maxTokens: 1000,
-    responseFormat: { type: 'json_object' },
+    tools: [{ type: 'function', function: {
+      name: 'grade_code',
+      parameters: {
+        type: 'object',
+        properties: {
+          score: { type: 'number' },
+          feedback: { type: 'string' }
+        },
+        required: ['score', 'feedback']
+      }
+    }}],
     timeout: 20000
   });
 
@@ -192,7 +203,7 @@ export const gradeJavaCode = async ({ studentCode, problemDescription, testCode 
 
 
     return {
-      gradingResults: parseScoreFeedback(JSON.stringify(gradingResults)),//{ score, feedback }
+      gradingResults,//{ score, feedback }
       testResults: executionResult.testResults, //testResults from junit/maven
       generatedTests: testCode // junit test code generated
     };
@@ -203,8 +214,6 @@ export const gradeJavaCode = async ({ studentCode, problemDescription, testCode 
     throw new Error('Failed to grade Java code');
   }
 }
-
-
 
 //=============NON-CODING QUESTIONS GRADING WITH DEEPSEEK API USING BINARY RUBRIC METHOD =============
 //non-coding question grading with deepseek API using binary rubric method
@@ -236,13 +245,25 @@ export const gradeWithBinaryRubric = async ({ userAnswer, answerKey, question, q
   let raw;
   try {
     raw = await callLLM({
+      provider: 'deepseek',
       messages: [
-        { role: 'system', content: 'You are a fair grading assistant that responds ONLY with JSON.' },
+        { role: 'system', content: 'You are a fair grading assistant.' },
         { role: 'user', content: prompt },
       ],
       temperature: 0.2,
       maxTokens: 400,
-      responseFormat: { type: 'json_object' },
+      tools: [{ type: 'function', function: {
+        name: 'grade_response',
+        parameters: {
+          type: 'object',
+          properties: {
+            answerQuality: { type: 'string', enum: ['pass', 'fail'] },
+            compliance: { type: 'string', enum: ['pass', 'fail'] },
+            feedback: { type: 'string' }
+          },
+          required: ['answerQuality', 'compliance', 'feedback']
+        }
+      }}],
       timeout: timeoutMs,
     });
   } catch (err) {
@@ -250,7 +271,7 @@ export const gradeWithBinaryRubric = async ({ userAnswer, answerKey, question, q
     return { score: 0, result: 'FAIL', feedback: 'Error during grading process', breakdown: null };
   }
 
-  const rubricScores = parseBinaryRubricResponse(raw);
+  const rubricScores = JSON.parse(raw);
 
   if (!rubricScores) {
     return { score: 0, result: 'FAIL', feedback: 'Model response malformed or empty', breakdown: null };
@@ -285,12 +306,21 @@ export const gradeWithBinaryRubric = async ({ userAnswer, answerKey, question, q
 
           raw = await callLLM({
             messages: [
-              { role: 'system', content: 'You are an empathetic grading assistant that responds ONLY with JSON.' },
+              { role: 'system', content: 'You are an empathetic grading assistant.' },
               { role: 'user', content: prompt },
             ],
             temperature: 0.3,
             maxTokens: 300,
-            responseFormat: { type: 'json_object' },
+            tools: [{ type: 'function', function: {
+              name: 'provide_feedback',
+              parameters: {
+                type: 'object',
+                properties: {
+                  feedback: { type: 'string' }
+                },
+                required: ['feedback']
+              }
+            }}],
             timeout: timeoutMs,
           });
 
