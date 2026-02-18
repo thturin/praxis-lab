@@ -87,3 +87,7 @@ coverage/
 # Misc
 *.swp
 *.swo
+
+
+#docs
+docs/

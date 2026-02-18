@@ -62,13 +62,10 @@ export const buildBinaryRubricPrompt = ({ userAnswer, answerKey, question, quest
 
       IMPORTANT:
       - Use "You" not "the student" in feedback.
-      - Respond ONLY with valid JSON: { "answerQuality": "pass|fail", "compliance": "pass|fail", "feedback": string }
       - Feedback should identify which criteria failed and provide positive, constructive guidance (≤1000 characters)
       - Do not penalize for grammar or spelling errors.
-      - Accept examples that demonstrate understanding, even if brief.
       - If response is empty, mark both criteria as fail
       -When  the student's answer contains code, do not judge upon O(n) complexity and how efficient the algorithm is.
-      - When the student's answer contains code, evaluate correctness by tracing execution with test inputs, not by comparing code structure or algorithm to the answer key. Different approaches (e.g., swaps vs. store-and-shift, iterative vs. recursive, different loop structures) that produce the correct output must PASS.
       - Consider that student's might show their work in the response. Focus on final answer correctness and completeness.
       `;
 
