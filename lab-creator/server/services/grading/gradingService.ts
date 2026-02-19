@@ -1,7 +1,7 @@
 const { callLLM, callEmbeddingModel } = require('../llm/llmClient');
 const { compileAndRunJavaWithTests } = require('../docker/dockerExecutionService');
-const { buildBinaryRubricPrompt, buildJUnitTestPrompt, buildAnalyzeStudentCodePrompt, buildCosineFeedbackPrompt } = require('../prompts/gradingPrompts');
-const { calculateBinaryScore } = require('../scoring/scoringService');
+const { buildBinaryRubricPrompt, buildJUnitTestPrompt, buildAnalyzeStudentCodePrompt, buildCosineFeedbackPrompt, buildKeyPointsExtractionPrompt, buildPseudoQuestionPrompt } = require('../prompts/gradingPrompts');
+
 
 
 interface GenerateJUnitTestsParams {
@@ -35,7 +35,7 @@ interface GradingResult {
   score: number;
   result: string;
   feedback: string;
-  breakdown: { answerQuality: string; compliance: string } | null;
+  breakdown: { answerQuality: string; compliance: string; textSimilarity?: number; keyPointsSimilarity?: number; pseudoQuestionSimilarity?: number } | null;
 }
 
 interface CosineSimilarityVerification {
@@ -43,7 +43,7 @@ interface CosineSimilarityVerification {
   answerQuality: 'PASS' | 'FAIL';
 }
 
-//=============Embedded Model=============
+//=============EMBEDDING MODEL (TSM)=============
 export const calculateEmbeddingSimilarity = async (text1: string, text2: string): Promise<number> => {
   try {
     //console.log('==============look here', [text1, text2]);
@@ -53,7 +53,7 @@ export const calculateEmbeddingSimilarity = async (text1: string, text2: string)
     // dot product (A*B) => extracts the similarities of the two vectors. IT ignores the differences
     //refer to this video https://www.youtube.com/watch?v=FrDAU2N0FEg&t=369s
     //(||A|| * ||B||) => normalizes the dot product to a value -1 to 1.
-    console.log(embedding[0],embedding[1]);
+    //console.log(embedding[0],embedding[1]);
     //const dotProduct = embedding[0].reduce((sum, value, i) => sum + value * embedding[1][i], 0);
     //The dot product is: A[0]*B[0] + A[1]*B[1] + A[2]*B[2] + ...
     let dotProduct = 0;
@@ -92,6 +92,277 @@ export const calculateEmbeddingSimilarity = async (text1: string, text2: string)
     return 0; // Return 0 similarity on error to avoid false positives
   }
 }
+
+export const verifyWithCosineSimilarity = async (userAnswer: string, answerKey: string): Promise<CosineSimilarityVerification> => {
+  try {
+    const similarity = await calculateEmbeddingSimilarity(userAnswer, answerKey);
+    console.log('Cosine similarity verification:', similarity);
+    const answerQuality = similarity >= 0.6 ? 'PASS' : 'FAIL';
+    return {
+      similarity,
+      answerQuality
+    };
+  } catch (err) {
+    console.error('Error in verifyWithCosineSimilarity:', err);
+    return {
+      similarity: -1,
+      answerQuality: 'FAIL'
+    };
+  }
+}
+
+//=============KEY POINTS MATCHING (KPM) =============
+// Extracts key knowledge points from an answer using LLM, returns array of concise phrases
+const extractKeyPoints = async (question: string, answer: string, answerKey?: string): Promise<string[]> => {
+  const prompt = buildKeyPointsExtractionPrompt({ question, answer, answerKey });
+  const raw = await callLLM({
+    messages: [
+      { role: 'system', content: 'You are an exam grading assistant.' },
+      { role: 'user', content: prompt }
+    ],
+    temperature: 0.2,
+    maxTokens: 300,
+    tools: [{ type: 'function', function: {
+      name: 'extract_key_points',
+      parameters: {
+        type: 'object',
+        properties: {
+          keyPoints: { type: 'array', items: { type: 'string' } }
+        },
+        required: ['keyPoints']
+      }
+    }}],
+    timeout: 15000
+  });
+  const parsed = JSON.parse(raw);
+  return parsed.keyPoints || [];
+};
+
+// Extracts key points from both answers, embeds them, and compares via cosine similarity
+interface KeyPointsMatchResult {
+  similarity: number;
+  studentPoints: string[];
+  referencePoints: string[];
+}
+
+export const matchKeyPoints = async (question: string, userAnswer: string, answerKey: string): Promise<KeyPointsMatchResult> => {
+  try {
+    // Extract key points from both answers in parallel
+    const [studentPoints, referencePoints] = await Promise.all([
+      extractKeyPoints(question, userAnswer, answerKey),
+      extractKeyPoints(question, answerKey)
+    ]);
+
+    console.log('KPM student points:', studentPoints);
+    //console.log('KPM reference points:', referencePoints);
+
+    if (studentPoints.length === 0 || referencePoints.length === 0) {
+      return { similarity: 0, studentPoints, referencePoints };
+    }
+
+    // Join key points into single strings and compare embeddings
+    const studentText = studentPoints.join('; ');
+    const referenceText = referencePoints.join('; ');
+    const similarity = await calculateEmbeddingSimilarity(studentText, referenceText);
+
+    console.log('KPM similarity:', similarity);
+    return { similarity, studentPoints, referencePoints };
+  } catch (err) {
+    console.error('Error in matchKeyPoints:', err.message);
+    return { similarity: 0, studentPoints: [], referencePoints: [] };
+  }
+};
+
+//=============PSEUDO-QUESTION MATCHING (PQM) =============
+// Generates a pseudo-question from student answer, then compares with original question via embeddings
+interface PseudoQuestionMatchResult {
+  similarity: number;
+  pseudoQuestion: string;
+}
+
+export const matchPseudoQuestion = async (question: string, userAnswer: string): Promise<PseudoQuestionMatchResult> => {
+  try {
+    const prompt = buildPseudoQuestionPrompt({ question, userAnswer });
+    const raw = await callLLM({
+      messages: [
+        { role: 'system', content: 'You are an exam grading assistant.' },
+        { role: 'user', content: prompt }
+      ],
+      temperature: 0.3,
+      maxTokens: 200,
+      tools: [{ type: 'function', function: {
+        name: 'generate_pseudo_question',
+        parameters: {
+          type: 'object',
+          properties: {
+            pseudoQuestion: { type: 'string' }
+          },
+          required: ['pseudoQuestion']
+        }
+      }}],
+      timeout: 15000
+    });
+
+    const parsed = JSON.parse(raw);
+    const pseudoQuestion = parsed.pseudoQuestion || '';
+
+    if (!pseudoQuestion) {
+      return { similarity: 0, pseudoQuestion: '' };
+    }
+
+    console.log('PQM pseudo-question:', pseudoQuestion);
+    const similarity = await calculateEmbeddingSimilarity(pseudoQuestion, question);
+    console.log('PQM similarity:', similarity);
+
+    return { similarity, pseudoQuestion };
+  } catch (err) {
+    console.error('Error in matchPseudoQuestion:', err.message);
+    return { similarity: 0, pseudoQuestion: '' };
+  }
+};
+
+//=============LLM-BASED GENERAL EVALUATION (LGE)=============
+// Primary scorer — uses LLM with binary rubric to evaluate answerQuality, compliance, and provide feedback
+interface LGEResult {
+  success: boolean;
+  answerQuality?: string;
+  compliance?: string;
+  feedback?: string;
+}
+
+export const evaluateWithLLM = async ({ userAnswer, answerKey, question, questionType, AIPrompt, timeoutMs = 20000 }: GradeWithBinaryRubricParams): Promise<LGEResult> => {
+  try {
+    const prompt = buildBinaryRubricPrompt({ userAnswer, answerKey, question, questionType, AIPrompt });
+    const raw = await callLLM({
+      provider: 'deepseek',
+      messages: [
+        { role: 'system', content: 'You are a fair grading assistant.' },
+        { role: 'user', content: prompt },
+      ],
+      temperature: 0.2,
+      maxTokens: 400,
+      tools: [{ type: 'function', function: {
+        name: 'grade_response',
+        parameters: {
+          type: 'object',
+          properties: {
+            answerQuality: { type: 'string', enum: ['pass', 'fail'] },
+            compliance: { type: 'string', enum: ['pass', 'fail'] },
+            feedback: { type: 'string' }
+          },
+          required: ['answerQuality', 'compliance', 'feedback']
+        }
+      }}],
+      timeout: timeoutMs,
+    });
+    const parsed = JSON.parse(raw);
+    return { success: true, ...parsed };
+  } catch (err) {
+    console.error('LGE error:', err.response?.data || err.message);
+    return { success: false };
+  }
+};
+
+//=============ORCHESTRATOR: GRADE NON-CODING QUESTIONS =============
+// Runs all 4 modules in parallel (LGE, KPM, PQM, TSM) then fuses results
+// Approximates the paper's cross-module deep fusion (Transformer encoder + MLP + sigmoid)
+// with weighted scoring. Weights derived from ablation study (Table 4) --> take a look at read-me.pdf in docs:
+//   LGE & KPM removal caused largest performance drops → highest weights
+//   PQM & TSM had smaller individual impact → lower weights
+
+// Fusion weights — tune these based on grading accuracy observations
+const FUSION_WEIGHTS = { lge: 0.35, kpm: 0.30, tsm: 0.20, pqm: 0.15 };
+const FUSION_PASS_THRESHOLD = 0.5;
+
+export const gradeWithBinaryRubric = async ({ userAnswer, answerKey, question, questionType, AIPrompt, timeoutMs = 20000 }: GradeWithBinaryRubricParams): Promise<GradingResult> => {
+  if (!process.env.DEEPSEEK_API_KEY) {
+    throw new Error('DEEPSEEK_API_KEY is not configured');
+  }
+
+  // Run all 4 modules in parallel (shared embedding layer = Voyage across TSM/KPM/PQM)
+  const [lgeResult, kpmResult, pqmResult, tsmResult] = await Promise.all([
+    evaluateWithLLM({ userAnswer, answerKey, question, questionType, AIPrompt, timeoutMs }),
+    matchKeyPoints(question, userAnswer, answerKey),
+    matchPseudoQuestion(question, userAnswer),
+    verifyWithCosineSimilarity(userAnswer, answerKey),
+  ]);
+
+  // If LGE failed entirely (API error), fall back to embedding-only fusion
+  const lgeScore = lgeResult.success && lgeResult.answerQuality === 'pass' ? 1 : 0;
+  let feedback = lgeResult.feedback || '';
+  const compliance = lgeResult.success ? (lgeResult.compliance || 'pass') : 'pass';
+
+  // Weighted fusion: approximate cross-module deep fusion (paper Section 4.6)
+  // Each module produces a 0-1 signal, combined via fixed weights
+  const fusedScore = (
+    FUSION_WEIGHTS.lge * lgeScore +
+    FUSION_WEIGHTS.kpm * kpmResult.similarity +
+    FUSION_WEIGHTS.tsm * tsmResult.similarity +
+    FUSION_WEIGHTS.pqm * pqmResult.similarity
+  );
+
+  // Binary decision from fused score (paper: sigmoid → threshold)
+  const answerQuality = fusedScore >= FUSION_PASS_THRESHOLD ? 'PASS' : 'FAIL';
+  // Compliance is only assessable by LGE (format/length/constraint checking)
+  const complianceResult = compliance === 'pass' ? 'PASS' : 'FAIL';
+  const allPass = answerQuality === 'PASS' && complianceResult === 'PASS';
+
+  const score = allPass ? 1 : 0;
+  const result = allPass ? 'PASS' : 'FAIL';
+
+  const breakdown = {
+    answerQuality,
+    compliance: complianceResult,
+    textSimilarity: tsmResult.similarity,
+    keyPointsSimilarity: kpmResult.similarity,
+    pseudoQuestionSimilarity: pqmResult.similarity,
+  };
+
+  console.log('Grading fusion:', {
+    lge: lgeScore,
+    tsm: tsmResult.similarity.toFixed(3),
+    kpm: kpmResult.similarity.toFixed(3),
+    pqm: pqmResult.similarity.toFixed(3),
+    fusedScore: fusedScore.toFixed(3),
+    answerQuality,
+    compliance: complianceResult,
+    result,
+  });
+
+  // If fusion overrode LGE's FAIL (embedding modules rescued the grade), generate encouraging feedback
+  if (lgeScore === 0 && answerQuality === 'PASS') {
+    try {
+      const feedbackPrompt = buildCosineFeedbackPrompt({
+        userAnswer, answerKey, question, similarity: fusedScore
+      });
+      const raw = await callLLM({
+        messages: [
+          { role: 'system', content: 'You are an empathetic grading assistant.' },
+          { role: 'user', content: feedbackPrompt },
+        ],
+        temperature: 0.3,
+        maxTokens: 400,
+        tools: [{ type: 'function', function: {
+          name: 'provide_feedback',
+          parameters: {
+            type: 'object',
+            properties: { feedback: { type: 'string' } },
+            required: ['feedback']
+          }
+        }}],
+        timeout: timeoutMs,
+      });
+      const feedbackResponse = JSON.parse(raw);
+      feedback = feedbackResponse.feedback || 'Your answer demonstrates correct understanding of the key concepts.';
+    } catch (err) {
+      console.error('Error generating fusion override feedback:', err.response?.data || err.message);
+      feedback = 'Your answer demonstrates correct understanding of the key concepts, though expressed differently than the expected response.';
+    }
+  }
+
+  return { score, result, feedback, breakdown };
+};
+
 
 ///=============CODE QUESTIONS GRADING WITH JUNIT TESTS + LLM FEEDBACK ANALYSIS =============
 // Generate JUnit test code using LLM
@@ -214,136 +485,6 @@ export const gradeJavaCode = async ({ studentCode, problemDescription, testCode 
     throw new Error('Failed to grade Java code');
   }
 }
-
-//=============NON-CODING QUESTIONS GRADING WITH DEEPSEEK API USING BINARY RUBRIC METHOD =============
-//non-coding question grading with deepseek API using binary rubric method
-
-export const verifyWithCosineSimilarity = async (userAnswer: string, answerKey: string): Promise<CosineSimilarityVerification> => {
-  try {
-    const similarity = await calculateEmbeddingSimilarity(userAnswer, answerKey);
-    console.log('Cosine similarity verification:', similarity);
-    const answerQuality = similarity >= 0.6 ? 'PASS' : 'FAIL';
-    return {
-      similarity,
-      answerQuality
-    };
-  } catch (err) {
-    console.error('Error in verifyWithCosineSimilarity:', err);
-    return {
-      similarity: -1,
-      answerQuality: 'FAIL'
-    };
-  }
-}
-
-export const gradeWithBinaryRubric = async ({ userAnswer, answerKey, question, questionType, AIPrompt, timeoutMs = 20000 }: GradeWithBinaryRubricParams): Promise<GradingResult> => {
-  if (!process.env.DEEPSEEK_API_KEY) {
-    throw new Error('DEEPSEEK_API_KEY is not configured');
-  }
-
-  let prompt = buildBinaryRubricPrompt({ userAnswer, answerKey, question, questionType, AIPrompt });
-  let raw;
-  try {
-    raw = await callLLM({
-      provider: 'deepseek',
-      messages: [
-        { role: 'system', content: 'You are a fair grading assistant.' },
-        { role: 'user', content: prompt },
-      ],
-      temperature: 0.2,
-      maxTokens: 400,
-      tools: [{ type: 'function', function: {
-        name: 'grade_response',
-        parameters: {
-          type: 'object',
-          properties: {
-            answerQuality: { type: 'string', enum: ['pass', 'fail'] },
-            compliance: { type: 'string', enum: ['pass', 'fail'] },
-            feedback: { type: 'string' }
-          },
-          required: ['answerQuality', 'compliance', 'feedback']
-        }
-      }}],
-      timeout: timeoutMs,
-    });
-  } catch (err) {
-    console.error('Error calling LLM for grading:', err.response?.data || err.message);
-    return { score: 0, result: 'FAIL', feedback: 'Error during grading process', breakdown: null };
-  }
-
-  const rubricScores = JSON.parse(raw);
-
-  if (!rubricScores) {
-    return { score: 0, result: 'FAIL', feedback: 'Model response malformed or empty', breakdown: null };
-  }
-
-  let { score, result, breakdown } = calculateBinaryScore(rubricScores);
-  let feedback = rubricScores.feedback;
-
-  // Second verification with cosine similarity if binary rubric failed on answer quality
-  if (breakdown.answerQuality !== 'PASS') {
-    try {
-      const verification = await verifyWithCosineSimilarity(userAnswer, answerKey);
-      console.log('Cosine similarity verification result:', verification);
-
-      if (verification.answerQuality === 'PASS') {
-        console.log(`Overriding binary rubric with cosine similarity (${verification.similarity.toFixed(3)})`);
-
-        // Update score, result and breakdown answerQuality
-        score = 1;
-        result = 'PASS';
-        breakdown.answerQuality = 'PASS';
-
-        // Generate constructive feedback using the new prompt
-        //only the feedback will be updated here.
-        try {
-          prompt = buildCosineFeedbackPrompt({
-            userAnswer,
-            answerKey,
-            question,
-            similarity: verification.similarity
-          });
-
-          raw = await callLLM({
-            messages: [
-              { role: 'system', content: 'You are an empathetic grading assistant.' },
-              { role: 'user', content: prompt },
-            ],
-            temperature: 0.3,
-            maxTokens: 300,
-            tools: [{ type: 'function', function: {
-              name: 'provide_feedback',
-              parameters: {
-                type: 'object',
-                properties: {
-                  feedback: { type: 'string' }
-                },
-                required: ['feedback']
-              }
-            }}],
-            timeout: timeoutMs,
-          });
-
-          const feedbackResponse = JSON.parse(raw);
-          feedback = feedbackResponse.feedback || 'Your answer demonstrates correct understanding of the key concepts.';
-
-        } catch (err) {
-          console.error('Error generating cosine similarity feedback:', err.response?.data || err.message);
-          feedback = 'Your answer demonstrates correct understanding of the key concepts, though expressed differently than the expected response.';
-        }
-      }
-    } catch (err) {
-      console.error('Error during cosine similarity verification:', err.response?.data || err.message);
-    }
-  }
-
-  return {
-    score,
-    result,
-    feedback,
-    breakdown
-  };
-};
 
 
 

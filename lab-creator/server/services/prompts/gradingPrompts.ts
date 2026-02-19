@@ -1,5 +1,3 @@
-export const { BINARY_RUBRIC } = require('./rubrics');
-
 interface BuildBinaryRubricPromptParams {
   userAnswer: string;
   answerKey: string;
@@ -27,83 +25,50 @@ interface BuildCosineFeedbackPromptParams {
   similarity: number;
 }
 
-//Updated prompt to reduce hallucinations by removing subjective language and adding explicit "grade only what's written" constraint
+interface BuildKeyPointsExtractionPromptParams {
+  question: string;
+  answer: string;
+  answerKey?: string;
+}
+
+interface BuildPseudoQuestionPromptParams {
+  question: string;
+  userAnswer: string;
+}
+
+
+//=======================NON-CODING QUESTIONS=======================================
+// Simplified LGE prompt adapted from LASQ unified grading framework
 export const buildBinaryRubricPrompt = ({ userAnswer, answerKey, question, questionType, AIPrompt }: BuildBinaryRubricPromptParams): string => {
-  const rubric = BINARY_RUBRIC;
+  return `You are an intelligent assistant responsible for evaluating a student's answer.
+    QUESTION:
+    ${question}
+    REFERENCE ANSWER:
+    ${answerKey}
+    STUDENT'S ANSWER:
+    ${userAnswer}
+    ${AIPrompt ? `\nINSTRUCTOR NOTES:\n${AIPrompt}` : ''}
+    Evaluate the student's answer against the reference answer:
+    1. answerQuality: Does the answer demonstrate correct understanding and cover the key concepts? Answers expressed differently from the reference are acceptable if semantically equivalent.
+    2. compliance: Does the answer follow any format, length, or constraint instructions in the question?
 
-  let rubricSection = `\nGRADING RUBRIC (Binary Pass/Fail - ALL must pass):\n\n`;
-  rubric.criteria.forEach((criterion: { name: string; description: string }, idx: number) => {
-    rubricSection += `${idx + 1}. ${criterion.name}:\n   ${criterion.description}\n\n`;
-  });
+    Provide concise feedback noting strengths and weaknesses. Use "you" not "the student". Ignore grammar, spelling, and code efficiency.`;
+    };
 
-  const basePrompt = AIPrompt || '';
-
-  return `You are an empathetic, and fair grading assistant. Evaluate this student response using binary criteria.
-
-      QUESTION:
-      ${question}
-
-      ANSWER KEY/EXPECTED RESPONSE:
-      ${answerKey}
-
-      STUDENT'S ANSWER:
-      ${userAnswer}
-      ${rubricSection}
-      ${basePrompt ? `\nINSTRUCTOR NOTES:\n${basePrompt}` : ''}
-
-      GRADING INSTRUCTIONS:
-
-      1. Evaluate each criterion independently as PASS or FAIL
-      2. For answerQuality: Check if student answered the question completely and correctly. If the question asks for explanation/reasoning/examples, those must be present and specific.
-      3. For compliance: Check if student followed format/length/constraint instructions in the question. Ignore grammar/spelling errors.
-      4. For the overall result: BOTH criteria must PASS for overall PASS
-      5. If EITHER criterion fails, the overall result is FAIL
-      6. Provide specific feedback explaining which criteria passed/failed and why. Provide constructive suggestions for improvement.
-
-      IMPORTANT:
-      - Use "You" not "the student" in feedback.
-      - Feedback should identify which criteria failed and provide positive, constructive guidance (≤1000 characters)
-      - Do not penalize for grammar or spelling errors.
-      - If response is empty, mark both criteria as fail
-      -When  the student's answer contains code, do not judge upon O(n) complexity and how efficient the algorithm is.
-      - Consider that student's might show their work in the response. Focus on final answer correctness and completeness.
-      `;
-
-};
-
-// Prompt for generating constructive feedback after cosine similarity verification
+            // Prompt for generating constructive feedback after cosine similarity verification
 export const buildCosineFeedbackPrompt = ({ userAnswer, answerKey, question, similarity }: BuildCosineFeedbackPromptParams): string => {
-  return `You are an empathetic grading assistant providing feedback on a student's answer.
-
+  return `You are an empathetic grading assistant. This answer was verified as semantically correct (similarity: ${similarity.toFixed(3)}).
       QUESTION:
       ${question}
-
-      ANSWER KEY/EXPECTED RESPONSE:
+      REFERENCE ANSWER:
       ${answerKey}
-
       STUDENT'S ANSWER:
       ${userAnswer}
-
-      CONTEXT:
-      This answer has been verified as semantically correct using embedding similarity analysis (similarity score: ${similarity.toFixed(3)}).
-      While the wording differs from the answer key, the core concepts and meaning are equivalent.
-
-      YOUR TASK:
-      Provide constructive, encouraging feedback that:
-      1. Acknowledges the student's correct understanding
-      2. Highlights any specific strengths in the answer (e.g., clear explanation, good example)
-      3. Optionally suggests minor improvements or clarifications (if any)
-      4. Maintains a positive, supportive tone
-
-      IMPORTANT:
-      - Use "You" not "the student" in feedback
-      - Keep feedback concise (<=1000 characters)
-      - Focus on correctness and understanding, not on matching exact wording
-      - Respond ONLY with valid JSON: { "feedback": string }
-
-      `;
+      Provide concise, encouraging feedback. Acknowledge correct understanding, note strengths, and suggest minor improvements if any. Use "you" not "the student".`;
 };
 
+
+//=======================JAVA CODING QUESTIONS===========================================
 // Generate JUnit test prompt
 export const buildJUnitTestPrompt = ({ problemDescription, answerKey }: BuildJUnitTestPromptParams): string => {
   return `You are a Java testing expert. Create JUnit 5 test code for this programming problem:
@@ -140,7 +105,6 @@ export const buildJUnitTestPrompt = ({ problemDescription, answerKey }: BuildJUn
               `;
 };
 
-
 // Analyze student code prompt for score and feedback
 export const buildAnalyzeStudentCodePrompt = ({ problemDescription, studentCode, testResults, testOutput }: BuildAnalyzeStudentCodePromptParams): string => {
   return `Grade this Java programming submission:
@@ -175,4 +139,45 @@ export const buildAnalyzeStudentCodePrompt = ({ problemDescription, studentCode,
             Respond with JSON: { "score": number, "feedback": string }`;
 };
 
+// KPM: Extract key knowledge points from an answer for embedding comparison
+// Adapted from LASQ paper Prompts 2 & 3 (see docs/ai-architecture-development/PROMPTS_SUMMARY.txt)
+export const buildKeyPointsExtractionPrompt = ({ question, answer, answerKey }: BuildKeyPointsExtractionPromptParams): string => {
+  return `You are an exam grading assistant. Extract 2-5 key knowledge points from the given answer.
+
+      QUESTION:
+      ${question}
+      ${answerKey ? `\nREFERENCE ANSWER (for context):\n${answerKey}` : ''}
+
+      ANSWER TO EXTRACT FROM:
+      ${answer}
+
+      Requirements:
+      1. Focus only on scoring-relevant knowledge points. Ignore redundant or irrelevant information.
+      2. Each knowledge point should be concise (one short phrase or sentence).
+      3. Extract 2-5 knowledge points. If fewer exist, that's fine.
+      4. Do not subjectively evaluate — only extract key points.
+      5. If the answer contains no relevant knowledge points, return an empty array.
+      `;
+};
+
+// PQM: Generate a pseudo-question from the student's answer for relevance checking
+// Adapted from LASQ paper Prompt 1 (see docs/ai-architecture-development/PROMPTS_SUMMARY.txt)
+export const buildPseudoQuestionPrompt = ({ question, userAnswer }: BuildPseudoQuestionPromptParams): string => {
+  return `You are an exam grading assistant. Generate a pseudo-question from the student's answer.
+
+      The pseudo-question should represent what exam question the student appears to be answering based on their response.
+
+      Requirements:
+      1. Extract the core question or topic from the student's answer.
+      2. Ignore redundant information and errors in the answer.
+      3. The pseudo-question should be consistent with the main semantics of the student's answer.
+      4. Do not simply copy the original question.
+
+      ORIGINAL QUESTION (for domain context only):
+      ${question}
+
+      STUDENT'S ANSWER:
+      ${userAnswer}
+      `;
+};
 

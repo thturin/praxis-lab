@@ -6,7 +6,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "tsx app.js",
     "dev": "nodemon app.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "add-test-case": "tsx scripts/addTestCase.ts"
   },
   "keywords": [],
   "author": "",
