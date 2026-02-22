@@ -1,4 +1,4 @@
-interface BuildBinaryRubricPromptParams {
+interface BuildLGEPromptParams {
   userAnswer: string;
   answerKey: string;
   question: string;
@@ -39,7 +39,7 @@ interface BuildPseudoQuestionPromptParams {
 
 //=======================NON-CODING QUESTIONS=======================================
 // Simplified LGE prompt adapted from LASQ unified grading framework
-export const buildBinaryRubricPrompt = ({ userAnswer, answerKey, question, questionType, AIPrompt }: BuildBinaryRubricPromptParams): string => {
+export const buildLGEPrompt = ({ userAnswer, answerKey, question, questionType, AIPrompt }: BuildLGEPromptParams): string => {
   return `You are an intelligent assistant responsible for evaluating a student's answer.
     QUESTION:
     ${question}
@@ -48,9 +48,7 @@ export const buildBinaryRubricPrompt = ({ userAnswer, answerKey, question, quest
     STUDENT'S ANSWER:
     ${userAnswer}
     ${AIPrompt ? `\nINSTRUCTOR NOTES:\n${AIPrompt}` : ''}
-    Evaluate the student's answer against the reference answer:
-    1. answerQuality: Does the answer demonstrate correct understanding and cover the key concepts? Answers expressed differently from the reference are acceptable if semantically equivalent.
-    2. compliance: Does the answer follow any format, length, or constraint instructions in the question?
+    Evaluate the student's answer against the reference answer. Does the answer demonstrate correct understanding and cover the key concepts? Answers expressed differently from the reference are acceptable if semantically equivalent.
 
     Provide concise feedback noting strengths and weaknesses. Use "you" not "the student". Ignore grammar, spelling, and code efficiency.`;
     };

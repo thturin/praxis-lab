@@ -1,6 +1,6 @@
 const { callLLM, callEmbeddingModel } = require('../llm/llmClient');
 const { compileAndRunJavaWithTests } = require('../docker/dockerExecutionService');
-const { buildBinaryRubricPrompt, buildJUnitTestPrompt, buildAnalyzeStudentCodePrompt, buildCosineFeedbackPrompt, buildKeyPointsExtractionPrompt, buildPseudoQuestionPrompt } = require('../prompts/gradingPrompts');
+const { buildLGEPrompt, buildJUnitTestPrompt, buildAnalyzeStudentCodePrompt, buildCosineFeedbackPrompt, buildKeyPointsExtractionPrompt, buildPseudoQuestionPrompt } = require('../prompts/gradingPrompts');
 
 
 
@@ -22,7 +22,7 @@ interface GradeJavaCodeParams {
   testCode: string;
 }
 
-interface GradeWithBinaryRubricParams {
+interface GradeParams {
   userAnswer: string;
   answerKey: string;
   question: string;
@@ -35,7 +35,7 @@ interface GradingResult {
   score: number;
   result: string;
   feedback: string;
-  breakdown: { answerQuality: string; compliance: string; textSimilarity?: number; keyPointsSimilarity?: number; pseudoQuestionSimilarity?: number } | null;
+  breakdown: { answerQuality: string; textSimilarity?: number; keyPointsSimilarity?: number; pseudoQuestionSimilarity?: number } | null;
 }
 
 interface CosineSimilarityVerification {
@@ -124,6 +124,7 @@ const extractKeyPoints = async (question: string, answer: string, answerKey?: st
     maxTokens: 300,
     tools: [{ type: 'function', function: {
       name: 'extract_key_points',
+      description: 'Extract key knowledge points from an answer',
       parameters: {
         type: 'object',
         properties: {
@@ -192,6 +193,7 @@ export const matchPseudoQuestion = async (question: string, userAnswer: string):
       maxTokens: 200,
       tools: [{ type: 'function', function: {
         name: 'generate_pseudo_question',
+        description: 'Generate a pseudo-question from the student answer',
         parameters: {
           type: 'object',
           properties: {
@@ -222,19 +224,19 @@ export const matchPseudoQuestion = async (question: string, userAnswer: string):
 };
 
 //=============LLM-BASED GENERAL EVALUATION (LGE)=============
-// Primary scorer — uses LLM with binary rubric to evaluate answerQuality, compliance, and provide feedback
+// Primary scorer — uses LLM to evaluate answerQuality and provide feedback
 interface LGEResult {
   success: boolean;
   answerQuality?: string;
-  compliance?: string;
   feedback?: string;
+  error?: string;
 }
 
-export const evaluateWithLLM = async ({ userAnswer, answerKey, question, questionType, AIPrompt, timeoutMs = 20000 }: GradeWithBinaryRubricParams): Promise<LGEResult> => {
+export const evaluateWithLLM = async ({ userAnswer, answerKey, question, questionType, AIPrompt, timeoutMs = 20000 }: GradeParams): Promise<LGEResult> => {
   try {
-    const prompt = buildBinaryRubricPrompt({ userAnswer, answerKey, question, questionType, AIPrompt });
+    const prompt = buildLGEPrompt({ userAnswer, answerKey, question, questionType, AIPrompt });
     const raw = await callLLM({
-      provider: 'deepseek',
+      provider: 'kevin',
       messages: [
         { role: 'system', content: 'You are a fair grading assistant.' },
         { role: 'user', content: prompt },
@@ -243,23 +245,47 @@ export const evaluateWithLLM = async ({ userAnswer, answerKey, question, questio
       maxTokens: 400,
       tools: [{ type: 'function', function: {
         name: 'grade_response',
+        description: 'Grade the student response with pass/fail and feedback',
         parameters: {
           type: 'object',
           properties: {
             answerQuality: { type: 'string', enum: ['pass', 'fail'] },
-            compliance: { type: 'string', enum: ['pass', 'fail'] },
             feedback: { type: 'string' }
           },
-          required: ['answerQuality', 'compliance', 'feedback']
+          required: ['answerQuality', 'feedback']
         }
       }}],
       timeout: timeoutMs,
     });
     const parsed = JSON.parse(raw);
+    console.log('---LGE parsed response:', parsed);
+    //return success with parsed results or failure with error message
     return { success: true, ...parsed };
-  } catch (err) {
-    console.error('LGE error:', err.response?.data || err.message);
-    return { success: false };
+  } catch (err: any) {
+    const status = err.response?.status;
+    const apiError = err.response?.data?.error?.message || err.response?.data?.error || err.response?.data;
+    let errorMsg: string;
+
+    if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
+      errorMsg = `LGE timed out after ${timeoutMs}ms`;
+    } else if (err.code === 'ENOTFOUND' || err.code === 'ECONNREFUSED') {
+      errorMsg = `LGE cannot reach API: ${err.code}`;
+    } else if (status === 401 || status === 403) {
+      errorMsg = `LGE auth error (${status}): check API key`;
+    } else if (status === 404) {
+      errorMsg = `LGE model not found (404): check provider/model config`;
+    } else if (status === 429) {
+      errorMsg = `LGE rate limited (429): try again shortly`;
+    } else if (status && status >= 500) {
+      errorMsg = `LGE provider server error (${status})`;
+    } else if (apiError) {
+      errorMsg = `LGE API error: ${typeof apiError === 'string' ? apiError : JSON.stringify(apiError)}`;
+    } else {
+      errorMsg = `LGE error: ${err.message || 'unknown'}`;
+    }
+
+    console.error(errorMsg);
+    return { success: false, error: errorMsg };
   }
 };
 
@@ -274,10 +300,7 @@ export const evaluateWithLLM = async ({ userAnswer, answerKey, question, questio
 const FUSION_WEIGHTS = { lge: 0.35, kpm: 0.30, tsm: 0.20, pqm: 0.15 };
 const FUSION_PASS_THRESHOLD = 0.5;
 
-export const gradeWithBinaryRubric = async ({ userAnswer, answerKey, question, questionType, AIPrompt, timeoutMs = 20000 }: GradeWithBinaryRubricParams): Promise<GradingResult> => {
-  if (!process.env.DEEPSEEK_API_KEY) {
-    throw new Error('DEEPSEEK_API_KEY is not configured');
-  }
+export const gradeWithFusion = async ({ userAnswer, answerKey, question, questionType, AIPrompt, timeoutMs = 20000 }: GradeParams): Promise<GradingResult> => {
 
   // Run all 4 modules in parallel (shared embedding layer = Voyage across TSM/KPM/PQM)
   const [lgeResult, kpmResult, pqmResult, tsmResult] = await Promise.all([
@@ -287,10 +310,13 @@ export const gradeWithBinaryRubric = async ({ userAnswer, answerKey, question, q
     verifyWithCosineSimilarity(userAnswer, answerKey),
   ]);
 
-  // If LGE failed entirely (API error), fall back to embedding-only fusion
-  const lgeScore = lgeResult.success && lgeResult.answerQuality === 'pass' ? 1 : 0;
+  // If LGE failed entirely (API error), abort — can't grade without the primary scorer
+  if (!lgeResult.success) {
+    throw new Error(`LGE model failed — ${lgeResult.error || 'unknown error'}`);
+  }
+
+  const lgeScore = lgeResult.answerQuality === 'pass' ? 1 : 0;
   let feedback = lgeResult.feedback || '';
-  const compliance = lgeResult.success ? (lgeResult.compliance || 'pass') : 'pass';
 
   // Weighted fusion: approximate cross-module deep fusion (paper Section 4.6)
   // Each module produces a 0-1 signal, combined via fixed weights
@@ -303,16 +329,11 @@ export const gradeWithBinaryRubric = async ({ userAnswer, answerKey, question, q
 
   // Binary decision from fused score (paper: sigmoid → threshold)
   const answerQuality = fusedScore >= FUSION_PASS_THRESHOLD ? 'PASS' : 'FAIL';
-  // Compliance is only assessable by LGE (format/length/constraint checking)
-  const complianceResult = compliance === 'pass' ? 'PASS' : 'FAIL';
-  const allPass = answerQuality === 'PASS' && complianceResult === 'PASS';
-
-  const score = allPass ? 1 : 0;
-  const result = allPass ? 'PASS' : 'FAIL';
+  const score = answerQuality === 'PASS' ? 1 : 0;
+  const result = answerQuality;
 
   const breakdown = {
     answerQuality,
-    compliance: complianceResult,
     textSimilarity: tsmResult.similarity,
     keyPointsSimilarity: kpmResult.similarity,
     pseudoQuestionSimilarity: pqmResult.similarity,
@@ -324,8 +345,6 @@ export const gradeWithBinaryRubric = async ({ userAnswer, answerKey, question, q
     kpm: kpmResult.similarity.toFixed(3),
     pqm: pqmResult.similarity.toFixed(3),
     fusedScore: fusedScore.toFixed(3),
-    answerQuality,
-    compliance: complianceResult,
     result,
   });
 
@@ -344,6 +363,7 @@ export const gradeWithBinaryRubric = async ({ userAnswer, answerKey, question, q
         maxTokens: 400,
         tools: [{ type: 'function', function: {
           name: 'provide_feedback',
+          description: 'Provide encouraging feedback for the student',
           parameters: {
             type: 'object',
             properties: { feedback: { type: 'string' } },
@@ -438,6 +458,7 @@ export const analyzeStudentCode = async ({ problemDescription, studentCode, test
     maxTokens: 1000,
     tools: [{ type: 'function', function: {
       name: 'grade_code',
+      description: 'Grade student code with a score and feedback',
       parameters: {
         type: 'object',
         properties: {
@@ -488,4 +509,4 @@ export const gradeJavaCode = async ({ studentCode, problemDescription, testCode 
 
 
 
-//module.exports = { gradeWithBinaryRubric, gradeJavaCode, computeFinalScore, generateJUnitTests, calculateEmbeddingSimilarity };
+//module.exports = { gradeWithFusion, gradeJavaCode, computeFinalScore, generateJUnitTests, calculateEmbeddingSimilarity };

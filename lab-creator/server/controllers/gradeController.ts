@@ -1,6 +1,6 @@
 require('dotenv').config();
 const { PrismaClient } = require('@prisma/client');
-const { gradeWithBinaryRubric, calculateEmbeddingSimilarity, generateJUnitTests, gradeJavaCode } = require('../services/grading/gradingService');
+const { gradeWithFusion, calculateEmbeddingSimilarity, generateJUnitTests, gradeJavaCode } = require('../services/grading/gradingService');
 const { computeFinalScore } = require('../services/scoring/scoringService');
 const { parseCodeFromHtml, parseTextFromHtml } = require('../utils/parseHtml');
 const prisma = new PrismaClient();
@@ -68,12 +68,12 @@ export const gradeQuestionDeepSeek = async (req: Request, res: Response) => {
     const parsedQuestion = parseTextFromHtml(question);
    
     try {
-        const result = await gradeWithBinaryRubric({ userAnswer: parsedUserAnswer, answerKey: parsedAnswerKey, question: parsedQuestion, questionType, AIPrompt });
+        const result = await gradeWithFusion({ userAnswer: parsedUserAnswer, answerKey: parsedAnswerKey, question: parsedQuestion, questionType, AIPrompt });
         // const result = await gradeWithDeepSeek({ userAnswer, answerKey, question, questionType, AIPrompt });
         return res.json(result);
     } catch (err: any) {
-        console.log('Error in accessing deep seek api. Request failed.', err.message);
-        return res.status(400).json({ error: 'cannot access deep seek api' });
+        console.error('Grading failed:', err.message);
+        return res.status(503).json({ error: 'Grading service temporarily unavailable. Please try again later.' });
     }
 };
 
@@ -144,7 +144,7 @@ export const regradeSession = async (req: Request, res: Response) => {
 
                 } else {
                     // Use binary rubric grading for all other questions
-                    result = await gradeWithBinaryRubric({
+                    result = await gradeWithFusion({
                         userAnswer: parseCodeFromHtml(userAnswer),
                         answerKey: parseCodeFromHtml(details.key),
                         question: parseTextFromHtml(details.prompt),
