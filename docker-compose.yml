@@ -128,6 +128,20 @@ services:
 
 
 
-volumes:
-  pgdata-portal:
-  pgdata-lab-creator:
+  analytics:
+    build: ./analytics
+    container_name: analytics
+    ports:
+      - "18501:8501"
+    environment:
+      PORTAL_DATABASE_URL: ${PORTAL_DATABASE_URL}
+      LABCREATOR_DATABASE_URL: ${LABCREATOR_DATABASE_URL}
+    depends_on:
+      - portal-db
+      - lab-creator-db
+    volumes:
+      - ./analytics:/app
+    networks:
+      - edu-platform-network
+    restart: no
+
