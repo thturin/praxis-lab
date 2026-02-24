@@ -79,6 +79,7 @@ services:
     environment:
       REACT_APP_API_HOST: ${REACT_APP_API_HOST}
       REACT_APP_API_LAB_HOST: ${REACT_APP_API_LAB_HOST}
+      STREAMLIT_API_URL: ${STREAMLIT_API_URL}
       # Add WebSocket configuration to enable hotreloading
       WDS_SOCKET_PORT: 13000 #lets websocket  use main react port
       FAST_REFRESH: true

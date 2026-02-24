@@ -236,7 +236,7 @@ export const evaluateWithLLM = async ({ userAnswer, answerKey, question, questio
   try {
     const prompt = buildLGEPrompt({ userAnswer, answerKey, question, questionType, AIPrompt });
     const raw = await callLLM({
-      provider: 'kevin',
+      provider: 'deepseek',
       messages: [
         { role: 'system', content: 'You are a fair grading assistant.' },
         { role: 'user', content: prompt },

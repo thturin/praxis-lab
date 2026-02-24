@@ -10,8 +10,8 @@ import LabPreview from '../../lab/components/LabPreview';
 import SubmissionRegrade from '../components/SubmissionRegrade';
 import CreateAssignment from '../components/CreateAssignment';
 import EditAssignment from '../components/EditAssignment';
-import AnalyticsDashboard from './AnalyticsDashboard';
-
+//import AnalyticsDashboard from './AnalyticsDashboard';
+import { AnalyticsDashboard } from './AnalyticsDashboard';
 
 
 const AdminDashboard = ({ user, onLogout }) => {
@@ -365,13 +365,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                 )}
 
                 {currentTab === 'analytics' && selectedAssignmentObj?.type === 'lab' && (
-                    <AnalyticsDashboard
-                        assignmentId={selectedAssignmentId}
-                        labId={selectedAssignmentObj.labId}
-                        sections={sections}
-                        assignmentTitle={title}
-                        submissions={submissions}
-                    />
+                    <AnalyticsDashboard/>
                 )}
             </div>
         </div>

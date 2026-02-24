@@ -3,6 +3,7 @@ import pandas as pd
 from sqlalchemy import create_engine
 import os
 import plotly.express as px
+import plotly.graph_objects as go
 
 # --- Database connections ---
 portal_engine = create_engine(os.environ["PORTAL_DATABASE_URL"])
@@ -76,7 +77,7 @@ elif page == "Late Submissions":
     st.header("Late Submission Rates")
 
     df = load_query("late_submission_rate.sql", portal_engine)
-    fig = px.bar(df, x="assignment_name", y="late_percent (%)",
+    fig = px.bar(df, x="title", y="late_percent",
                  title="Late Submission Rate by Assignment (%)")
     st.plotly_chart(fig, use_container_width=True)
     st.dataframe(df)
@@ -88,6 +89,8 @@ elif page == "Student Performance":
 
     df_scores = load_query("student_scores.sql", portal_engine)
     df_top = load_query("top_performers_per_section.sql", portal_engine)
+
+    
 
     # Score distribution histogram
     fig = px.histogram(df_scores, x="raw_score_average", nbins=20,
@@ -104,10 +107,32 @@ elif page == "Student Performance":
     # Lateness
     st.subheader("Student Lateness")
     df_late = load_query("student_lateness.sql", portal_engine)
-    fig2 = px.scatter(df_late, x="total_submissions", y="late_submissions",
-                      hover_data=["name"],
-                      title="Submissions vs Late Submissions per Student")
+    
+    sections = df_late["section_name"].unique()
+    selected_section = st.selectbox("Select Section for Lateness", sections)
+    df_late = df_late[df_late["section_name"] == selected_section]
+    
+    # Calculate on-time submissions for stacked bar
+    df_late['on_time_submissions'] = df_late['total_submissions'] - df_late['late_submissions']
+
+    # Create stacked bar chart
+    fig2 = go.Figure(data=[
+        go.Bar(name='On Time', x=df_late['name'], y=df_late['on_time_submissions'],
+               marker_color='lightblue'),
+        go.Bar(name='Late', x=df_late['name'], y=df_late['late_submissions'],
+               marker_color='salmon')
+    ])
+
+    fig2.update_layout(
+        barmode='stack',
+        title="Student Submissions: On-Time vs Late",
+        xaxis_title="Student",
+        yaxis_title="Number of Submissions",
+        height=400
+    )
+
     st.plotly_chart(fig2, use_container_width=True)
+
 
 
 # --- Question Difficulty ---
