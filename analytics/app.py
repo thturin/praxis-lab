@@ -4,6 +4,7 @@ from sqlalchemy import create_engine
 import os
 import plotly.express as px
 import plotly.graph_objects as go
+from utils import generate_display_numbers, natural_sort_key
 
 # --- Database connections ---
 portal_engine = create_engine(os.environ["PORTAL_DATABASE_URL"])
@@ -138,18 +139,51 @@ elif page == "Student Performance":
 # --- Question Difficulty ---
 elif page == "Question Difficulty":
     st.header("Question Difficulty Analysis")
-
     df = load_query("question_scores_per_lab.sql", labcreator_engine)
 
     labs = df["title"].unique()
     selected_lab = st.selectbox("Select Lab", labs)
     filtered = df[df["title"] == selected_lab].sort_values("avg_score")
+    
+    #all blocks for all the labs, we need to filter them for the selected lab to generate display numbers
+    #df["title]== selected_lab creaters a boolean mask that is true for the row(s) where the title matches the selected lab, and then .iloc[0] gets the first (and should be only) row that matches, and specifically the "blocks" column from that row]
+    #boolean mask will return only rows with that title
+    
+    #we all of the rows represent a unique question key, but they all have the same blocks 
+    # #value since they belong to the same lab, so we can just take the first one 
+    # to generate display numbers
+    try:
+        single_lab_blocks = df.loc[df["title"] == selected_lab, "blocks"].iloc[0]
+    except IndexError:
+        st.error(f"No data found for lab: {selected_lab}")
+        single_lab_blocks = None
+        single_lab_blocks = df["blocks"][df["title"] == selected_lab].iloc[0] # Get blocks for the selected lab
 
-    fig = px.bar(filtered, x="question_key", y="avg_score",
-                 title=f"Question Scores — {selected_lab}")
+    #"1772030400738":"1",
+    #"1772030405500":"2"
+    question_display_map = generate_display_numbers(single_lab_blocks)  # Use iloc[0] to get the first (and only) value in the series
+    
+    # Map question keys to display numbers using the generated map
+    filtered['question_number_display'] = filtered['question_key'].map(question_display_map)
+    
+    # Sort by the natural order of question numbers (1, 2, 3, 1a, 1b, etc.)
+    filtered['sort_key'] = filtered['question_number_display'].map(natural_sort_key)
+    filtered = filtered.sort_values('sort_key')
+    
+    fig = px.bar(filtered, x="question_number_display", y="avg_score",
+                 title=f"Question Scores — {selected_lab}",
+                  labels={
+                 "question_number_display": "Question Number Q.#",
+                 "avg_score": "Average Score"
+             })
+    # categoryorder='trace' will keep the order of categories as they appear in the data, which is now sorted by our natural sort key
+    fig.update_xaxes(type='category', categoryorder='trace')  # ← Treat as categorical, not numeric
+    
+    
     st.plotly_chart(fig, use_container_width=True)
 
     st.subheader("Detailed Difficulty Ranking")
     df_detail = load_query("question_difficulty_ranking.sql", labcreator_engine)
     detail_filtered = df_detail[df_detail["title"] == selected_lab].sort_values("avg_score")
+    detail_filtered['question_number_display'] = detail_filtered['question_key'].map(question_display_map)
     st.dataframe(detail_filtered)

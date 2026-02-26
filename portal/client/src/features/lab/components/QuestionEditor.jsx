@@ -3,6 +3,7 @@ import { createQuestion } from "../models/block";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import { getImageUrlsFromHtml } from './fetchImages';
+import ImageTextBox from './ImageTextBox';
 import axios from 'axios';
 
 
@@ -67,6 +68,13 @@ function QuestionEditor({ q, onQuestionChange, onQuestionDelete, level = 0 }) {
                                 }}
                                 theme="snow"
                             />
+                            {q.prompt && q.prompt.includes('<img') && (
+                                <ImageTextBox
+                                    htmlContent={q.prompt}
+                                    imageText={q.imageText || ""}
+                                    onChange={(text) => update("imageText", text)}
+                                />
+                            )}
                         </div>
 
                         {/*DISPLAY ANSWER KEY AND EXPLANATION.  If q has subquestions, don't render*/}
@@ -216,10 +224,8 @@ function QuestionEditor({ q, onQuestionChange, onQuestionDelete, level = 0 }) {
                     {level === 0 && (
                         <button
                             onClick={() => {
-                                const nextIndex = (q.subQuestions?.length || 0);
-                                const nextLetter = String.fromCharCode(97 + nextIndex); //97=a
                                 const newSubQ = createQuestion();
-                                newSubQ.prompt = `${nextLetter}.`;
+                                // No need to set prompt prefix - display numbers handle this automatically
                                 const updatedSubs = [...(q.subQuestions || []), newSubQ];
 
                                 onQuestionChange({ //updaste current question with new sub questions and since there are sub q's make the isScored for parent q false

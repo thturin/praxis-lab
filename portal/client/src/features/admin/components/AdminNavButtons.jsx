@@ -9,16 +9,13 @@ const activeStyle = {
 const AdminNavButtons = ({ onSelect, assignmentTitle, assignmentId, assignmentType, currentTab }) => {
     let viewDisabled = false;
     let submissionsDisabled = false;
-    let analyticsDisabled = false;
     if (assignmentId === -1) {
         viewDisabled = true;
         submissionsDisabled = true;
-        analyticsDisabled = true;
     }
 
     if (assignmentType === 'github') {
         viewDisabled = true;
-        analyticsDisabled = true;
     }
 
 
@@ -30,10 +27,8 @@ const AdminNavButtons = ({ onSelect, assignmentTitle, assignmentId, assignmentTy
                 color="secondary"
                 onClick={() => onSelect('analytics')}
                 style={{
-                    opacity: analyticsDisabled ? 0.5 : 1,
                     ...(currentTab === 'analytics' ? activeStyle : {})
                 }}
-                disabled={analyticsDisabled}
             >
                 📊 Analytics
             </Button>

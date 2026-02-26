@@ -364,7 +364,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                         onUpdateSubmission={undefined}                    />
                 )}
 
-                {currentTab === 'analytics' && selectedAssignmentObj?.type === 'lab' && (
+                {currentTab === 'analytics' && (
                     <AnalyticsDashboard/>
                 )}
             </div>

@@ -40,16 +40,18 @@ const SingleQuestionEditor = ({ blockId, responses, setResponses, gradedResults,
     );
 };
 
-const SubQuestionEditor = ({ question, responses, setResponses, gradedResults, finalScore, showExplanations, isAdmin, sessionId, onScoreUpdated }) => {
+const SubQuestionEditor = ({ question, displayNumber, responses, setResponses, gradedResults, finalScore, showExplanations, isAdmin, sessionId, onScoreUpdated }) => {
     const isScored = question.isScored;
     //const showExplanation = !isScored || hasGradedResultForBlock(question, gradedResults);
 
     return (
         <div key={question.id} className="mb-4">
-            <div 
-                className="font-semibold mb-1" 
-                dangerouslySetInnerHTML={{ __html: getImageUrlsFromHtml(question.prompt) }} 
-            />
+            <div className="font-semibold mb-1">
+                {displayNumber && (
+                    <span className="text-orange-700 mr-2">{displayNumber}.</span>
+                )}
+                <span dangerouslySetInnerHTML={{ __html: getImageUrlsFromHtml(question.prompt) }} />
+            </div>
             <ReactQuill
                 theme="snow"
                 value={responses[question.id] || ''}
@@ -76,7 +78,7 @@ const SubQuestionEditor = ({ question, responses, setResponses, gradedResults, f
     );
 };
 
-const QuestionBlock = ({ block, setResponses, responses, gradedResults, finalScore, showExplanations, isAdmin, sessionId, onScoreUpdated }) => {
+const QuestionBlock = ({ block, displayNumber, displayNumbers, setResponses, responses, gradedResults, finalScore, showExplanations, isAdmin, sessionId, onScoreUpdated }) => {
     const [isExpanded, setIsExpanded] = useState(true);
 
     return (
@@ -88,6 +90,9 @@ const QuestionBlock = ({ block, setResponses, responses, gradedResults, finalSco
             >
                 <div className="flex items-center gap-2">
                     <span className="font-semibold text-sm text-orange-800">❓</span>
+                    {displayNumber && (
+                        <span className="text-orange-700 text-sm font-bold">Question {displayNumber}</span>
+                    )}
                 </div>
                 <span className="text-orange-600 text-xs">
                     {isExpanded ? '▼' : '▶'}
@@ -97,16 +102,19 @@ const QuestionBlock = ({ block, setResponses, responses, gradedResults, finalSco
             {/* Expanded Content */}
             {isExpanded && (
                 <div className="px-4 pb-4">
-                    <div
-                        className="font-semibold mb-1"
-                        dangerouslySetInnerHTML={{ __html: getImageUrlsFromHtml(block.prompt) }}
-                    />
+                    <div className="font-semibold mb-1">
+                        {displayNumber && (
+                            <span className="text-orange-700 mr-2">{displayNumber}.</span>
+                        )}
+                        <span dangerouslySetInnerHTML={{ __html: getImageUrlsFromHtml(block.prompt) }} />
+                    </div>
                     {block.subQuestions.length > 0 ? (
                         <div className="ml-4 border-l-2 pl-2">
                             {block.subQuestions.map((sq, j) => (
                                 <SubQuestionEditor
                                     key={sq.id || j}
                                     question={sq}
+                                    displayNumber={displayNumbers?.[sq.id]}
                                     responses={responses}
                                     setResponses={setResponses}
                                     gradedResults={gradedResults}

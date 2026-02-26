@@ -1,9 +1,10 @@
 import axios from "axios";
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { createSession } from '../models/session';
 import MaterialBlock from './MaterialBlock';
 import QuestionBlock from './QuestionBlock';
 import AIPrompt from './AIPrompt';
+import { generateDisplayNumbers } from '../utils/questionNumbers';
 import "../styles/Lab.css";
 
 function LabPreview({
@@ -90,6 +91,14 @@ function LabPreview({
 
     const allQuestions = [...scoredNoSubQuestions, ...scoredSubQuestions];
 
+    // Generate display numbers for all questions (1, 2, 3, 1a, 1b, etc.)
+    const displayNumbers = useMemo(
+        () => generateDisplayNumbers(blocks),
+        [blocks]
+
+    );
+
+
     //AT SOME POINT YOU NEED TO REPLACE THIS WITH THE LOADLAB.JS FUNCTION
 
     const loadLab = useCallback(async () => {
@@ -119,8 +128,6 @@ function LabPreview({
             console.error('Error in getResponse()', err);
         }
     }, [labId, userId, username, title]);
-
-
 
 
     const saveSession = useCallback(async () => {
@@ -344,6 +351,8 @@ function LabPreview({
                                 // DISPLAY A QUESTION OR SUBQUESTION
                                 <QuestionBlock
                                     block={block}
+                                    displayNumber={displayNumbers[block.id]}
+                                    displayNumbers={displayNumbers}
                                     setResponses={handleResponseChange}
                                     responses={responses}
                                     gradedResults={gradedResults}
