@@ -98,9 +98,6 @@ function LabPreview({
 
     );
 
-
-    //AT SOME POINT YOU NEED TO REPLACE THIS WITH THE LOADLAB.JS FUNCTION
-
     const loadLab = useCallback(async () => {
         try {
             const response = await axios.get(`${process.env.REACT_APP_API_LAB_HOST}/lab/load-lab`, {
@@ -162,108 +159,159 @@ function LabPreview({
     }, [saveSession]);
 
 
+    // Finds question metadata from blocks and calls the grading API for a single question.
+    // Returns a graded result object, or null if the question can't be found/graded.
+    const gradeSingleQuestion = async (questionId, userAnswer) => {
+        let answerKey = '';
+        let question = '';
+        let type = '';
+        let generatedTestCode = '';
+        let imageText = '';
+
+        for (const block of blocks) {
+            //for questions without subquestions
+            if (block.blockType === 'question' && block.isScored &&
+                (!block.subQuestions || block.subQuestions.length === 0) &&
+                block.id === questionId) {
+                answerKey = block.key || block.explanation || '';
+                question = block.prompt;
+                type = block.type;
+                generatedTestCode = block.generatedTestCode || '';
+                imageText = block.imageText || '';
+                break;
+            }
+            //for questions with subquestions
+            if (block.blockType === 'question' && block.subQuestions && block.subQuestions.length > 0) {
+                for (const sq of block.subQuestions) {
+                    if (sq.id === questionId && sq.isScored) {
+                        answerKey = sq.key || sq.explanation || '';
+                        const mainPrompt = block.prompt || '';
+                        question = mainPrompt ? `${mainPrompt}\n\n${sq.prompt}` : sq.prompt;
+                        type = sq.type;
+                        generatedTestCode = sq.generatedTestCode || '';
+                        imageText = sq.imageText || block.imageText || '';
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (!question || !type) return null; 
+
+        if (!answerKey) { //no answer they then automatic score of 1 and feedback of no answer key provided. This is for non-graded questions where we still want to provide feedback and a score of 1 for completion.
+            return { score: 1, feedback: 'Auto-awarded: no answer key provided' };
+        }
+
+        //for code questions 
+        if (type === 'code') {
+            const response = await axios.post(`${process.env.REACT_APP_API_LAB_HOST}/grade/java`, {
+                userAnswer,
+                testCode: generatedTestCode,
+                question
+            });
+            return {
+                score: response.data.gradingResults.score,
+                feedback: response.data.gradingResults.feedback,
+                testResults: response.data.testResults,
+                generatedTests: response.data.generatedTests
+            };
+        } else {
+            const response = await axios.post(`${process.env.REACT_APP_API_LAB_HOST}/grade/deepseek`, {
+                userAnswer,
+                answerKey,
+                question,
+                questionType: type,
+                AIPrompt: aiPrompt,
+                imageText
+            });
+            return { score: response.data.score, feedback: response.data.feedback };
+        }
+    };
+
+    //keep track of questionID's that are currently being graded to disable grading button
+    //show "loading"
+    const [gradingQuestionIds, setGradingQuestionIds] = useState(new Set());
+    const [gradingErrors, setGradingErrors] = useState({});
+
+    //grade single quesrtion
+    const handleGradeSingle = async (questionId) => {
+        const userAnswer = responses[questionId];
+        setGradingQuestionIds(prev => new Set(prev).add(questionId));
+        setGradingErrors(prev => { const next = { ...prev }; delete next[questionId]; return next; });
+        try {
+            const result = await gradeSingleQuestion(questionId, userAnswer);
+            if (!result) return;
+
+            // Initialize all scored questions to 0 so calculate-score sees the full question set,
+            // not just the one being graded. Existing graded results are preserved on top.
+            //this will provide an accurate final score even if student only answered one question
+            const baseResults = {};
+            allQuestions.forEach(q => {
+                if (q.isScored) {
+                    //if there is a graded result for this question, add to baseResults
+                    //otherwise, add a default graded result with score 0 and feedback of "no response"
+                    baseResults[q.id] = session.gradedResults[q.id] || { score: 0, feedback: 'waiting for response' };
+                }
+            });
+            //combine baseResults with nrw graded result for this question
+            const newGradedResults = { ...baseResults, [questionId]: result };
+
+            //re-calculate final score with newGraded results 
+            const scoreResponse = await axios.post(`${process.env.REACT_APP_API_LAB_HOST}/grade/calculate-score`, {
+                gradedResults: newGradedResults,
+                labId,
+                userId
+            });
+
+            //update the session with new gradedResults and final score from calculate-score response
+            const newFinalScorePercent = scoreResponse.data.session.finalScore.percent;
+            setSession(prev => ({
+                ...prev,
+                gradedResults: newGradedResults,
+                finalScore: scoreResponse.data.session.finalScore
+            }));
+
+            //if a student is submitting, then create or update an actual submission
+            //admins do not have submissions
+            if (!isAdmin) {
+                try {
+                    const subResponse = await axios.post(`${process.env.REACT_APP_API_HOST}/submissions/upsertLab`, {
+                        assignmentId,
+                        userId,
+                        dueDate: selectedAssignmentDueDate,
+                        score: newFinalScorePercent
+                    });
+                    onUpdateSubmission(subResponse.data);
+                } catch (err) {
+                    console.error('error upsertingLab from handleGradeSingle', err);
+                }
+            }
+        } catch (err) {
+            console.error('Error in handleGradeSingle', err);
+            const message = err.response?.data?.error || 'Grading failed. Please try again.';
+            setGradingErrors(prev => ({ ...prev, [questionId]: message }));
+        } finally {
+            //set loading state for this questionId to false regardless of success or failure
+            setGradingQuestionIds(prev => {
+                const next = new Set(prev);
+                next.delete(questionId);
+                return next;
+            });
+        }
+    };
+
+    //if student clicks submit, we want to grade all questions, 
+    // even those that haven't been graded yet, and then calculate final score and update session and submission with final score.
     const submitResponses = async () => {
         setIsSubmitting(true);
         setSubmitError('');
-        let newGradedResults = { ...session.gradedResults };//create a new grade results to add empty
-        //LOOP THROUGH RESPONSES
+
+        let newGradedResults = { ...session.gradedResults };
         for (const [questionId, userAnswer] of Object.entries(responses)) {
-            //questionId is a string
-            let answerKey = '';
-            let question = '';
-            let type = '';
-            let generatedTestCode = '';
-            //THIS ASSUMES SUB QUESTIONS DO NOT HAVE SUB QUESTIONS
-            //LOOP THROUGH BLOCKS AND ASSIGN ANSWERKEY, QUESTIOHN, TYPE
-            for (const block of blocks) { //FIND BLOCK 
-                //find a question with no sub questions
-                if (block.blockType === 'question' && block.isScored &&
-                    (!block.subQuestions || block.subQuestions.length === 0) &&
-                    block.id === questionId) {
-                    // fall back to explanation if key is empty
-                    answerKey = block.key || block.explanation || '';
-                    question = block.prompt;
-                    type = block.type;
-                    generatedTestCode = block.generatedTestCode || '';
-                    break;
-                }
-
-                //find a question with subquestions
-                if (block.blockType === 'question' && block.subQuestions && block.subQuestions.length > 0) {
-                    for (const sq of block.subQuestions) {
-                        if (sq.id === questionId && sq.isScored) {
-                            answerKey = sq.key || sq.explanation || '';
-                            // Prepend parent prompt to provide context for grading
-                            const mainPrompt = block.prompt || '';
-                            question = mainPrompt
-                                ? `${mainPrompt}\n\n${sq.prompt}`
-                                : sq.prompt;
-                            type = sq.type;
-                            generatedTestCode = sq.generatedTestCode || '';
-                            break;
-                        }
-                    }
-                }
-            }
-            // If we can't identify question/type, skip. Allow empty answerKey (backend can auto-award).
-            if (!question || !type) {
-                continue;
-            }
-
-            // If no answer key or explanation, auto-award locally and skip backend
-            if (!answerKey) {
-                newGradedResults = {
-                    ...newGradedResults,
-                    [questionId]: {
-                        score: 1,
-                        feedback: 'Auto-awarded: no answer key provided',
-                    },
-                };
-                continue;
-            }
-
-            //DEEPSEEK API REQUEST for non Java coding questions
             try {
-                let response;
-
-                if (type === 'code') { //JAVA CODE GRADING 
-                    console.log('Grading Java code for questionId', questionId, typeof (generatedTestCode));
-                    response = await axios.post(`${process.env.REACT_APP_API_LAB_HOST}/grade/java`, {
-                        userAnswer,
-                        testCode: generatedTestCode,
-                        question
-                    });
-                    console.log('Java grading response', response.data);
-
-                    newGradedResults = {
-                        ...newGradedResults,
-                        [questionId]: { //add or update current gradedResult with questionId
-                            score: response.data.gradingResults.score,
-                            feedback: response.data.gradingResults.feedback,
-                            testResults: response.data.testResults,
-                            generatedTests: response.data.generatedTests
-                        }
-                    }
-                } else {
-                    response = await axios.post(`${process.env.REACT_APP_API_LAB_HOST}/grade/deepseek`, {
-                        userAnswer,
-                        //THIS IS WRONG NEED TO GET GENERATEDtESTcODE
-                        answerKey,
-                        question,
-                        questionType: type,
-                        AIPrompt: aiPrompt
-                    });
-                    //UPDATED GRADEDRESULTS for session 
-                    newGradedResults = {
-                        ...newGradedResults,
-                        [questionId]: { //add or update current gradedResult with questionId
-                            score: response.data.score,
-                            feedback: response.data.feedback
-                        }
-                    }
-                }
-
-                console.log('updating graded results', newGradedResults);
+                const result = await gradeSingleQuestion(questionId, userAnswer);
+                if (!result) continue;
+                newGradedResults = { ...newGradedResults, [questionId]: result };
             } catch (err) {
                 console.error("Error grading in LabPreview [LabPreview.jsx]", err.message);
             }
@@ -361,6 +409,9 @@ function LabPreview({
                                     isAdmin={isAdmin}
                                     sessionId={session.id}
                                     onScoreUpdated={handleScoreOverride}
+                                    onGradeSingle={readOnly ? undefined : handleGradeSingle}
+                                    gradingQuestionIds={gradingQuestionIds}
+                                    gradingErrors={gradingErrors}
                                 />
                             )}
                         </div>

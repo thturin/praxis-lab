@@ -1,6 +1,8 @@
 require('dotenv').config();
 const { PrismaClient } = require('@prisma/client');
 const {processBlockImages} = require('./uploadController');
+const path = require('path');
+const fs = require('fs');
 
 const prisma = new PrismaClient();
 
@@ -122,4 +124,43 @@ const updateLabPrompt = async (req, res) => {
     }
 };
 
-module.exports = {updateLabPrompt, upsertLab, loadLab, getLabs, deleteLab, getLab };
+//=================VISION LLM: IMAGE TO TEXT=================
+const extractImageText = async (req, res) => {
+    try {
+        const { base64Data, mimeType, imageUrl } = req.body;
+
+        let finalBase64 = base64Data;
+        let finalMimeType = mimeType;
+
+        if (!finalBase64 && imageUrl) {
+            // Image was already saved — read from uploads directory
+            const filename = imageUrl.replace('/images/', '');
+            const filePath = path.join(__dirname, '..', 'uploads', filename);
+
+            if (!fs.existsSync(filePath)) {
+                return res.status(404).json({ error: 'Image file not found' });
+            }
+
+            const fileBuffer = fs.readFileSync(filePath);
+            finalBase64 = fileBuffer.toString('base64');
+
+            // Determine mime type from extension
+            const ext = path.extname(filename).toLowerCase();
+            const mimeTypes = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.webp': 'image/webp' };
+            finalMimeType = mimeTypes[ext] || 'image/png';
+        }
+
+        if (!finalBase64 || !finalMimeType) {
+            return res.status(400).json({ error: 'Either base64Data+mimeType or imageUrl is required' });
+        }
+
+        const { analyzeImage } = require('../services/vision/visionService');
+        const result = await analyzeImage(finalBase64, finalMimeType);
+        return res.json({ text: result.text });
+    } catch (err) {
+        console.error('Error extracting image text:', err.message);
+        res.status(500).json({ error: 'Failed to extract text from image' });
+    }
+};
+
+module.exports = {updateLabPrompt, upsertLab, loadLab, getLabs, deleteLab, getLab, extractImageText };

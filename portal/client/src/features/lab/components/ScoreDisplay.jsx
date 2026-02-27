@@ -1,4 +1,5 @@
 import React from 'react';
+import ReactMarkdown from 'react-markdown';
 import ScoreOverride from './ScoreOverride';
 
 const ScoreDisplay = ({ sessionId, finalScore, gradedResults, questionId, isAdmin, maxPoints = 1, onScoreUpdated }) => {
@@ -22,7 +23,7 @@ const ScoreDisplay = ({ sessionId, finalScore, gradedResults, questionId, isAdmi
             <div className="leading-snug">
                 <span className="font-semibold">Score:</span> {result?.score}
                 {isAdmin && (
-                    <ScoreOverride 
+                    <ScoreOverride
                         sessionId={sessionId}
                         questionId={questionId}
                         currentScore={result?.score}
@@ -31,7 +32,10 @@ const ScoreDisplay = ({ sessionId, finalScore, gradedResults, questionId, isAdmi
                     />
                 )}
             </div>
-            <div className="leading-snug"><span className="font-semibold">Feedback:</span> {result?.feedback}</div>
+            <div className="leading-snug">
+                <span className="font-semibold">Feedback:</span>
+                <ReactMarkdown className="prose prose-sm max-w-none mt-1">{result?.feedback}</ReactMarkdown>
+            </div>
         </div>
     );
 }

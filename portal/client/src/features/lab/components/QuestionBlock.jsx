@@ -6,10 +6,11 @@ import 'react-quill/dist/quill.snow.css';
 import { getImageUrlsFromHtml } from './fetchImages';
 
 
-const SingleQuestionEditor = ({ blockId, responses, setResponses, gradedResults, finalScore, block, showExplanations, isAdmin, sessionId, onScoreUpdated }) => {
+const SingleQuestionEditor = ({ blockId, responses, setResponses, gradedResults, finalScore, block, showExplanations, isAdmin, sessionId, onScoreUpdated, onGradeSingle, gradingQuestionIds, gradingErrors }) => {
     const isScored = block.isScored;
-    //const showExplanation = !isScored || hasGradedResultForBlock(block, gradedResults);
-    
+    const isGrading = gradingQuestionIds?.has(blockId);
+    const gradingError = gradingErrors?.[blockId];
+
     return(
         <>
         <ReactQuill
@@ -22,7 +23,21 @@ const SingleQuestionEditor = ({ blockId, responses, setResponses, gradedResults,
             placeholder="Your answer..."
         />
 
-    { isScored && 
+        {isScored && onGradeSingle && (
+            <button
+                onClick={() => onGradeSingle(blockId)}
+                disabled={isGrading}
+                className={`mt-1 mb-2 px-3 py-1 text-sm rounded border border-orange-400 text-orange-700 bg-white hover:bg-orange-50 ${isGrading ? 'opacity-60 cursor-not-allowed' : ''}`}
+                type="button"
+            >
+                {isGrading ? 'Grading...' : 'Grade'}
+            </button>
+        )}
+        {gradingError && (
+            <p className="text-red-600 text-sm mb-2">{gradingError}</p>
+        )}
+
+    { isScored &&
         <ScoreDisplay
                 finalScore={finalScore}
                 gradedResults={gradedResults}
@@ -33,16 +48,17 @@ const SingleQuestionEditor = ({ blockId, responses, setResponses, gradedResults,
                 onScoreUpdated={onScoreUpdated}
             />
     }
-        
+
     {showExplanations && (<Explanation content={block.explanation} />)}
-        
+
     </>
     );
 };
 
-const SubQuestionEditor = ({ question, displayNumber, responses, setResponses, gradedResults, finalScore, showExplanations, isAdmin, sessionId, onScoreUpdated }) => {
+const SubQuestionEditor = ({ question, displayNumber, responses, setResponses, gradedResults, finalScore, showExplanations, isAdmin, sessionId, onScoreUpdated, onGradeSingle, gradingQuestionIds, gradingErrors }) => {
     const isScored = question.isScored;
-    //const showExplanation = !isScored || hasGradedResultForBlock(question, gradedResults);
+    const isGrading = gradingQuestionIds?.has(question.id);
+    const gradingError = gradingErrors?.[question.id];
 
     return (
         <div key={question.id} className="mb-4">
@@ -61,7 +77,20 @@ const SubQuestionEditor = ({ question, displayNumber, responses, setResponses, g
                 className="w-full mb-2"
                 placeholder="Your answer..."
             />
-            { isScored && 
+            {isScored && onGradeSingle && (
+                <button
+                    onClick={() => onGradeSingle(question.id)}
+                    disabled={isGrading}
+                    className={`mt-1 mb-2 px-3 py-1 text-sm rounded border border-orange-400 text-orange-700 bg-white hover:bg-orange-50 ${isGrading ? 'opacity-60 cursor-not-allowed' : ''}`}
+                    type="button"
+                >
+                    {isGrading ? 'Grading...' : 'Grade'}
+                </button>
+            )}
+            {gradingError && (
+                <p className="text-red-600 text-sm mb-2">{gradingError}</p>
+            )}
+            { isScored &&
             <ScoreDisplay
                     finalScore={finalScore}
                     gradedResults={gradedResults}
@@ -72,13 +101,13 @@ const SubQuestionEditor = ({ question, displayNumber, responses, setResponses, g
                     onScoreUpdated={onScoreUpdated}
                 />
             }
-            
+
             {showExplanations && (<Explanation content={question.explanation} />)}
         </div>
     );
 };
 
-const QuestionBlock = ({ block, displayNumber, displayNumbers, setResponses, responses, gradedResults, finalScore, showExplanations, isAdmin, sessionId, onScoreUpdated }) => {
+const QuestionBlock = ({ block, displayNumber, displayNumbers, setResponses, responses, gradedResults, finalScore, showExplanations, isAdmin, sessionId, onScoreUpdated, onGradeSingle, gradingQuestionIds, gradingErrors }) => {
     const [isExpanded, setIsExpanded] = useState(true);
 
     return (
@@ -123,6 +152,9 @@ const QuestionBlock = ({ block, displayNumber, displayNumbers, setResponses, res
                                     isAdmin={isAdmin}
                                     sessionId={sessionId}
                                     onScoreUpdated={onScoreUpdated}
+                                    onGradeSingle={onGradeSingle}
+                                    gradingQuestionIds={gradingQuestionIds}
+                                    gradingErrors={gradingErrors}
                                 />
                             ))}
                         </div>
@@ -138,6 +170,9 @@ const QuestionBlock = ({ block, displayNumber, displayNumbers, setResponses, res
                             isAdmin={isAdmin}
                             sessionId={sessionId}
                             onScoreUpdated={onScoreUpdated}
+                            onGradeSingle={onGradeSingle}
+                            gradingQuestionIds={gradingQuestionIds}
+                            gradingErrors={gradingErrors}
                         />
                     )}
                 </div>

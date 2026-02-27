@@ -5,13 +5,13 @@ const {
     generateTestsForJavaQuestion,
     gradeJavaCodeDeepSeek,
     regradeSession,
-    gradeQuestionDeepSeek,
+    gradeQuestion,
     calculateScore,
     gradeQuestionOllama
 } = require('../controllers/gradeController');
 
 //ROOT localhost:4000/api/grade
-router.post('/deepseek', gradeQuestionDeepSeek);
+router.post('/deepseek', gradeQuestion);
 router.post('/java', gradeJavaCodeDeepSeek);
 router.post('/java/generate-tests', generateTestsForJavaQuestion);
 router.post('/ollama', gradeQuestionOllama);

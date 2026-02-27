@@ -14,7 +14,7 @@ interface BuildJUnitTestPromptParams {
 interface BuildAnalyzeStudentCodePromptParams {
   problemDescription: string;
   studentCode: string;
-  testResults: { total: number; passed: number; failed: number };
+  testResults: { totalTests: number; passed: number; failed: number };
   testOutput: string;
 }
 
@@ -66,76 +66,6 @@ export const buildCosineFeedbackPrompt = ({ userAnswer, answerKey, question, sim
 };
 
 
-//=======================JAVA CODING QUESTIONS===========================================
-// Generate JUnit test prompt
-export const buildJUnitTestPrompt = ({ problemDescription, answerKey }: BuildJUnitTestPromptParams): string => {
-  return `You are a Java testing expert. Create JUnit 5 test code for this programming problem:
-
-            Problem Description:
-              ${problemDescription}
-
-              Answer Key:
-              ${answerKey}
-
-              Requirements:
-              1. Create a complete JUnit 5 test class named "SolutionTest"
-              2. Assume the student's class is named "Solution" with appropriate methods
-              3. If there are test cases, they will included in problem description or answerKey. If
-              there are n test cases provided, create test cases that test all scenarios and edge cases.
-              4. Use assertions from org.junit.jupiter.api.Assertions
-              5. Return ONLY the Java code - no markdown, no explanations
-
-              Test class template:
-              import org.junit.jupiter.api.Test;
-              import static org.junit.jupiter.api.Assertions.*;
-
-              public class SolutionTest {
-                  @Test
-                  public void testExample1() {
-                      Solution solution = new Solution();
-                      // Add test logic
-                  }
-              }
-              IMPORTANT:
-              -The student code will always be renamed to class "Solution" before execution.
-              You MUST use "new Solution(...)" for all object instantiation, even if the answer key
-              shows a different class name like "Student" or "Calculator".
-              `;
-};
-
-// Analyze student code prompt for score and feedback
-export const buildAnalyzeStudentCodePrompt = ({ problemDescription, studentCode, testResults, testOutput }: BuildAnalyzeStudentCodePromptParams): string => {
-  return `Grade this Java programming submission:
-
-            Problem: ${problemDescription}
-
-            The student's class and constructor name is "Solution" because the
-            code was renamed for grading purposes.Do not mention this in your feedback.
-            The class does not have to be named the same as in the problem description.
-
-            Student Code:
-            ${studentCode}
-
-            Test Results:
-            - Total Tests: ${testResults.total}
-            - Passed: ${testResults.passed}
-            - Failed: ${testResults.failed}
-
-            Test Output:
-            ${testOutput.substring(0, 1000)}
-
-            Provide:
-            1. Overall score (0-1) - calculate it by the number of passed tests over total tests.
-            2. Constructive feedback on what worked and what didn't
-            3. Specific suggestions for improvement of the student's code (not the test cases)
-            4. Wrap feedback and suggestion in the same key "feedback"
-
-            IMPORTANT:
-            - Use "You" not "the student" in feedback.
-            - You grade them ONLY based on the provided test results. Do not consider code style, efficiency, or other factors not reflected in the test results.
-
-            Respond with JSON: { "score": number, "feedback": string }`;
-};
 
 // KPM: Extract key knowledge points from an answer for embedding comparison
 // Adapted from LASQ paper Prompts 2 & 3 (see docs/ai-architecture-development/PROMPTS_SUMMARY.txt)
@@ -179,3 +109,75 @@ export const buildPseudoQuestionPrompt = ({ question, userAnswer }: BuildPseudoQ
       `;
 };
 
+
+//=======================JAVA CODING QUESTIONS===========================================
+// Generate JUnit test prompt
+export const buildJUnitTestPrompt = ({ problemDescription, answerKey }: BuildJUnitTestPromptParams): string => {
+  return `You are a Java testing expert. Create JUnit 5 test code for this programming problem:
+
+            Problem Description:
+              ${problemDescription}
+
+              Answer Key:
+              ${answerKey}
+
+              Requirements:
+              1. Create a complete JUnit 5 test class named "SolutionTest"
+              2. Assume the student's class is named "Solution" with appropriate methods
+              3. If there are test cases, they will included in problem description or answerKey. If
+              there are n test cases provided, create test cases that test all scenarios and edge cases.
+              4. Use assertions from org.junit.jupiter.api.Assertions
+              5. Return ONLY the Java code - no markdown, no explanations
+
+              Test class template:
+              import org.junit.jupiter.api.Test;
+              import static org.junit.jupiter.api.Assertions.*;
+
+              public class SolutionTest {
+                  @Test
+                  public void testExample1() {
+                      Solution solution = new Solution();
+                      // Add test logic
+                  }
+              }
+              IMPORTANT:
+              -The student code will always be renamed to class "Solution" before execution.
+              You MUST use "new Solution(...)" for all object instantiation, even if the answer key
+              shows a different class name like "Student" or "Calculator".
+              `;
+};
+
+
+// Analyze student code prompt for score and feedback
+export const buildAnalyzeStudentCodePrompt = ({ problemDescription, studentCode, testResults, testOutput }: BuildAnalyzeStudentCodePromptParams): string => {
+  return `Grade this Java programming submission:
+
+            Problem: ${problemDescription}
+
+            The student's class and constructor name is "Solution" because the
+            code was renamed for grading purposes.Do not mention this in your feedback.
+            The class does not have to be named the same as in the problem description.
+
+            Student Code:
+            ${studentCode}
+
+            Test Results:
+            - Total Tests: ${testResults.totalTests}
+            - Passed: ${testResults.passed}
+            - Failed: ${testResults.failed}
+
+            Test Output:
+            ${testOutput.substring(0, 1000)}
+
+            Provide:
+            1. Overall score (0-1) - calculate it by the number of passed tests over total tests.
+            2. Constructive feedback on what worked and what didn't
+            3. Specific suggestions for improvement of the student's code (not the test cases)
+            4. Wrap feedback and suggestion in the same key "feedback"
+
+            IMPORTANT:
+            - Use "You" not "the student" in feedback.
+            - You grade them ONLY based on the provided test results. Do not consider code style, efficiency, or other factors not reflected in the test results.
+
+            `;
+};

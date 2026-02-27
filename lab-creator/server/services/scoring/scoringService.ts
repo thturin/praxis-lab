@@ -1,8 +1,3 @@
-interface ScoreFeedback {
-  score: number;
-  feedback: string;
-}
-
 interface RubricScores {
   answerQuality: string;
   compliance: string;
@@ -28,51 +23,6 @@ interface FinalScore {
   maxScore: number;
   totalScore: number;
 }
-
-//enforce json response from LLM API
-export const parseScoreFeedback = (raw: string | object): ScoreFeedback => {
-  try {
-    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
-    const score = Number(parsed?.score);
-    const feedback = typeof parsed?.feedback === 'string' ? parsed.feedback.trim() : '';
-
-    if (Number.isFinite(score) && score >= 0 && score <= 1 && feedback.length > 0) {
-      return { score, feedback };
-    }
-  } catch (err: any) {
-    console.warn('DeepSeek parse error', err.message);
-  }
-
-  return { score: 0, feedback: 'Model response malformed or empty' };
-};
-
-export const parseBinaryRubricResponse = (raw: string | object): RubricScores | null => {
-  try {
-    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
-
-    const answerQuality = String(parsed?.answerQuality).toLowerCase();
-    const compliance = String(parsed?.compliance).toLowerCase();
-    const feedback = typeof parsed?.feedback === 'string' ? parsed.feedback.trim() : '';
-
-    // Validate all criteria are pass or fail
-    const validValues = ['pass', 'fail'];
-    if (!validValues.includes(answerQuality) || !validValues.includes(compliance)) {
-      console.warn('Invalid criterion values:', { answerQuality, compliance });
-      return null;
-    }
-
-    if (feedback.length === 0) {
-      console.warn('Empty feedback');
-      return null;
-    }
-
-    return { answerQuality, compliance, feedback };
-  } catch (err: any) {
-    console.warn('Binary rubric response parse error', err.message);
-  }
-
-  return null;
-};
 
 export const calculateBinaryScore = (rubricScores: RubricScores): BinaryScoreResult => {
   const allPass =

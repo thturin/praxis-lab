@@ -6,12 +6,14 @@ export const createQuestion = () => ({
   key: "",
   explanation:"",
   subQuestions: [],
-  isScored:true
+  isScored:true,
+  imageText: ""
 });
 
 export const createMaterial = () => ({
   id: Date.now().toString(),
   blockType: "material",
   content: "",
-  images: [] //array of base64 strings
+  images: [], //array of base64 strings
+  imageText: ""
 });

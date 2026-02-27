@@ -234,6 +234,7 @@ interface LGEResult {
 
 export const evaluateWithLLM = async ({ userAnswer, answerKey, question, questionType, AIPrompt, timeoutMs = 20000 }: GradeParams): Promise<LGEResult> => {
   try {
+    console.log('Here is the question:', question);
     const prompt = buildLGEPrompt({ userAnswer, answerKey, question, questionType, AIPrompt });
     const raw = await callLLM({
       provider: 'deepseek',
@@ -384,6 +385,9 @@ export const gradeWithFusion = async ({ userAnswer, answerKey, question, questio
 };
 
 
+
+
+
 ///=============CODE QUESTIONS GRADING WITH JUNIT TESTS + LLM FEEDBACK ANALYSIS =============
 // Generate JUnit test code using LLM
 export const generateJUnitTests = async ({ problemDescription, answerKey }: GenerateJUnitTestsParams): Promise<string> => {
@@ -446,8 +450,6 @@ export const generateJUnitTests = async ({ problemDescription, answerKey }: Gene
 // Analyze student code and test results to provide score and feedback
 export const analyzeStudentCode = async ({ problemDescription, studentCode, testResults, testOutput }: AnalyzeStudentCodeParams) => {
   const prompt = buildAnalyzeStudentCodePrompt({ problemDescription, studentCode, testResults, testOutput });
-  console.log('PROMPT', prompt);
-
 
   const raw = await callLLM({
     messages: [
@@ -475,16 +477,20 @@ export const analyzeStudentCode = async ({ problemDescription, studentCode, test
 
 };
 
-//java type question grading with deepseek api
+//final grading function that orchestrates the entire process for Java code questions: generates tests, runs them, analyzes results, and returns final score and feedback
 export const gradeJavaCode = async ({ studentCode, problemDescription, testCode }: GradeJavaCodeParams) => {
+  let executionResult;
+  try {
+    console.log('Running code in Docker lab-creator-container...');
+    executionResult = await compileAndRunJavaWithTests({ studentCode, testCode, timeout: 60000 });
+  } catch (err: any) {
+    console.error('Docker execution failed', err.message);
+    throw new Error('Failed to compile or run your code. Check for syntax errors.');
+  }
+
+  console.log('Execution result:', executionResult)
 
   try {
-    //2. execute student code against generated tests in docker sandbox
-    console.log('Running code in Docker lab-creator-container...');
-    const executionResult = await compileAndRunJavaWithTests({ studentCode, testCode, timeout: 60000 });
-    //console.log('Execution result:', executionResult);
-
-    //3. parse test Results for feedback and suggestions and score
     console.log('Analyzing student code and test results for grading...');
     const gradingResults = await analyzeStudentCode({
       problemDescription,
@@ -492,18 +498,15 @@ export const gradeJavaCode = async ({ studentCode, problemDescription, testCode 
       testResults: executionResult.testResults,
       testOutput: executionResult.stdout
     });
-
-
     return {
-      gradingResults,//{ score, feedback }
-      testResults: executionResult.testResults, //testResults from junit/maven
-      generatedTests: testCode // junit test code generated
+      gradingResults,
+      testResults: executionResult.testResults,
+      generatedTests: testCode
     };
-
-
   } catch (err: any) {
-    console.error('Error in GradeJavaCode', err.message);
-    throw new Error('Failed to grade Java code');
+    console.error('LLM analysis failed', err.message);
+
+    throw new Error('Code ran successfully but grading analysis failed. Please try again.');
   }
 }
 

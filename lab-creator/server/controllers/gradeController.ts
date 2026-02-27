@@ -53,8 +53,8 @@ export const generateTestsForJavaQuestion = async (req: Request, res: Response) 
 //grade a single question using DeepSeek API
 //filters out empty answers and missing answer keys
 //calls gradeWithDeepseek from gradingService
-export const gradeQuestionDeepSeek = async (req: Request, res: Response) => {
-    const { userAnswer, answerKey, question, questionType, AIPrompt } = req.body;
+export const gradeQuestion = async (req: Request, res: Response) => {
+    const { userAnswer, answerKey, question, questionType, AIPrompt, imageText } = req.body;
     const hasUserAnswer = Boolean(userAnswer && userAnswer.trim().length > 0);
     const hasAnswerKey = Boolean(answerKey && answerKey.trim().length > 0);
     if (!hasUserAnswer) {
@@ -65,8 +65,13 @@ export const gradeQuestionDeepSeek = async (req: Request, res: Response) => {
     }
     const parsedUserAnswer = parseTextFromHtml(userAnswer);
     const parsedAnswerKey = parseTextFromHtml(answerKey);
-    const parsedQuestion = parseTextFromHtml(question);
-   
+    let parsedQuestion = parseTextFromHtml(question);
+      console.log('==================imageText :', imageText);
+    // If the question block has extracted image text, append it so the LLM can use it
+    if (imageText && imageText.trim().length > 0) {
+        parsedQuestion += `\n\n[Image text]: ${imageText.trim()}`;
+    }
+  
     try {
         const result = await gradeWithFusion({ userAnswer: parsedUserAnswer, answerKey: parsedAnswerKey, question: parsedQuestion, questionType, AIPrompt });
         // const result = await gradeWithDeepSeek({ userAnswer, answerKey, question, questionType, AIPrompt });
@@ -233,4 +238,4 @@ export const gradeQuestionOllama = async (req: Request, res: Response) => {
 };
 
 
-//module.exports = { generateTestsForJavaQuestion, gradeJavaCodeDeepSeek, gradeSession, regradeSession, gradeQuestionDeepSeek, calculateScore, gradeQuestionOllama };
+//module.exports = { generateTestsForJavaQuestion, gradeJavaCodeDeepSeek, gradeSession, regradeSession, gradeQuestion, calculateScore, gradeQuestionOllama };
