@@ -40,9 +40,9 @@ const AdminAssignmentMenu = ({
             }
         });
 
-        // Sort assignments in each section by id (oldest to newest)
+        // Sort assignments in each section by due date (newest first)
         Object.keys(grouped).forEach(key => {
-            grouped[key].sort((a, b) => a.id - b.id);//swap if evalution is negative
+            grouped[key].sort((a, b) => new Date(b.dueDate) - new Date(a.dueDate));
         });
 
         return grouped;

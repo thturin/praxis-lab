@@ -63,9 +63,10 @@ const getAllAssignments = async (req, res) => {
                         some: { sectionId: sectionId }
                     }
                 },
+                orderBy: { dueDate: 'asc' },
                 include: { //include the submissions made by this student only
                     sections: { select: { sectionId: true } },
-                    submissions: { 
+                    submissions: {
                         where: { userId: req.user.id },
                         select: { id: true }
                     }
@@ -73,10 +74,11 @@ const getAllAssignments = async (req, res) => {
             });
             return res.json(assignments);
         }
-        
+
         // Super admin: see all assignments (including drafts)
         if (isSuperAdmin) {
             const assignments = await prisma.assignment.findMany({
+                orderBy: { dueDate: 'desc' },
                 include: {
                     sections: { select: { sectionId: true } },//sectionId willl be null for admin
                     submissions: { select: { id: true } }
@@ -84,7 +86,7 @@ const getAllAssignments = async (req, res) => {
             });
             return res.json(assignments);
         }
-        
+
         // Regular admin: see assignments in their sections only
         const assignments = await prisma.assignment.findMany({
             where: {
@@ -92,6 +94,7 @@ const getAllAssignments = async (req, res) => {
                     some: { sectionId: { in: adminSectionIds || [] } }
                 }
             },
+            orderBy: { dueDate: 'desc' },
             include: {
                 sections: { select: { sectionId: true } },//sectionId willl be null for admin
                 submissions: { select: { id: true } }
