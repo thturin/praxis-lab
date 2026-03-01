@@ -33,8 +33,11 @@ export const calculateScore = async (req: Request, res: Response) => {
 };
 
 export const generateTestsForJavaQuestion = async (req: Request, res: Response) => {
-    const { problemDescription, answerKey } = req.body;
-    const parsedProblemDescription = parseTextFromHtml(problemDescription);
+    const { problemDescription, answerKey, imageText } = req.body;
+    let parsedProblemDescription = parseTextFromHtml(problemDescription);
+    if (imageText && imageText.trim().length > 0) {
+        parsedProblemDescription += `\n\n[Image text]: ${imageText.trim()}`;
+    }
     const parsedAnswerKey = parseCodeFromHtml(answerKey);
     console.log('Generating tests for Java question...');
     console.log('Problem Description:', parsedProblemDescription);
@@ -50,9 +53,8 @@ export const generateTestsForJavaQuestion = async (req: Request, res: Response) 
         return res.status(500).json({ error: 'Failed to generate tests' });
     }
 };
-//grade a single question using DeepSeek API
+//grade a single question using LLM
 //filters out empty answers and missing answer keys
-//calls gradeWithDeepseek from gradingService
 export const gradeQuestion = async (req: Request, res: Response) => {
     const { userAnswer, answerKey, question, questionType, AIPrompt, imageText } = req.body;
     const hasUserAnswer = Boolean(userAnswer && userAnswer.trim().length > 0);
@@ -82,13 +84,17 @@ export const gradeQuestion = async (req: Request, res: Response) => {
     }
 };
 
-export const gradeJavaCodeDeepSeek = async (req: Request, res: Response) => {
-    const { userAnswer, testCode, question } = req.body;
+export const gradeJavaQuestion = async (req: Request, res: Response) => {
+    const { userAnswer, testCode, question, imageText } = req.body;
 
     try {
+        let problemDescription = parseTextFromHtml(question);
+        if (imageText && imageText.trim().length > 0) {
+            problemDescription += `\n\n[Image text]: ${imageText.trim()}`;
+        }
         const result = await gradeJavaCode({
             studentCode: parseCodeFromHtml(userAnswer),
-            problemDescription: parseTextFromHtml(question),
+            problemDescription,
             testCode
         });
         res.json(result);
@@ -238,4 +244,4 @@ export const gradeQuestionOllama = async (req: Request, res: Response) => {
 };
 
 
-//module.exports = { generateTestsForJavaQuestion, gradeJavaCodeDeepSeek, gradeSession, regradeSession, gradeQuestion, calculateScore, gradeQuestionOllama };
+//module.exports = { generateTestsForJavaQuestion, gradeJavaQuestion, gradeSession, regradeSession, gradeQuestion, calculateScore, gradeQuestionOllama };

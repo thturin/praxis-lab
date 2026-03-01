@@ -151,7 +151,8 @@ function QuestionEditor({ q, onQuestionChange, onQuestionDelete, level = 0 }) {
                                                             //call API to generate test code
                                                             const response = await axios.post(`${process.env.REACT_APP_API_LAB_HOST}/grade/java/generate-tests`, {
                                                                 problemDescription: q.prompt || '',
-                                                                answerKey: q.key || ''
+                                                                answerKey: q.key || '',
+                                                                imageText: q.imageText || ''
                                                             });
                                                             //update question with generated test code in question block
                                                             update("generatedTestCode", response.data.testCode);

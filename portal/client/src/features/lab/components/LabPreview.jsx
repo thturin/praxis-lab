@@ -207,7 +207,8 @@ function LabPreview({
             const response = await axios.post(`${process.env.REACT_APP_API_LAB_HOST}/grade/java`, {
                 userAnswer,
                 testCode: generatedTestCode,
-                question
+                question,
+                imageText
             });
             return {
                 score: response.data.gradingResults.score,
@@ -216,7 +217,7 @@ function LabPreview({
                 generatedTests: response.data.generatedTests
             };
         } else {
-            const response = await axios.post(`${process.env.REACT_APP_API_LAB_HOST}/grade/deepseek`, {
+            const response = await axios.post(`${process.env.REACT_APP_API_LAB_HOST}/grade/question`, {
                 userAnswer,
                 answerKey,
                 question,
