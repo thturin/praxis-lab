@@ -251,7 +251,7 @@ export const evaluateWithLLM = async ({ userAnswer, answerKey, question, questio
           type: 'object',
           properties: {
             answerQuality: { type: 'string', enum: ['pass', 'fail'] },
-            feedback: { type: 'string' }
+            feedback: { type: 'string', description: 'Feedback for the student written in markdown. Use bullet points or numbered lists to separate distinct points.' }
           },
           required: ['answerQuality', 'feedback']
         }
@@ -367,7 +367,7 @@ export const gradeWithFusion = async ({ userAnswer, answerKey, question, questio
           description: 'Provide encouraging feedback for the student',
           parameters: {
             type: 'object',
-            properties: { feedback: { type: 'string' } },
+            properties: { feedback: { type: 'string', description: 'Feedback for the student written in markdown. Use bullet points or numbered lists to separate distinct points.' } },
             required: ['feedback']
           }
         }}],

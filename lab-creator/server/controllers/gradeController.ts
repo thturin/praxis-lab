@@ -56,8 +56,8 @@ export const generateTestsForJavaQuestion = async (req: Request, res: Response) 
 //grade a single question using LLM
 //filters out empty answers and missing answer keys
 export const gradeQuestion = async (req: Request, res: Response) => {
-    const { userAnswer, answerKey, question, questionType, AIPrompt, imageText } = req.body;
-    const hasUserAnswer = Boolean(userAnswer && userAnswer.trim().length > 0);
+    const { userAnswer, answerKey, question, questionType, AIPrompt, adminImageText, adminKeyImageText, studentImageText } = req.body;
+    const hasUserAnswer = Boolean(userAnswer && userAnswer.trim().length > 0) || Boolean(studentImageText?.trim().length > 0);
     const hasAnswerKey = Boolean(answerKey && answerKey.trim().length > 0);
     if (!hasUserAnswer) {
         return res.status(400).json({ score: 0, feedback: 'No response submitted' });
@@ -65,18 +65,25 @@ export const gradeQuestion = async (req: Request, res: Response) => {
     if (!hasAnswerKey) {
         return res.status(400).json({ score: 1, feedback: 'Answer key missing; awarding full credit' });
     }
+    //remove html tags from userAnswer and answerKey before sending to gradingService
     const parsedUserAnswer = parseTextFromHtml(userAnswer);
-    const parsedAnswerKey = parseTextFromHtml(answerKey);
+    //combine user answers and student image text (if exists) for grading
+    const effectiveUserAnswer = [parsedUserAnswer, studentImageText].filter(Boolean).join('\n\n');
+    //remove html tags from answerKey and question, and append image text if exists, before sending to gradingService
+    let parsedAnswerKey = parseTextFromHtml(answerKey);
     let parsedQuestion = parseTextFromHtml(question);
-      console.log('==================imageText :', imageText);
-    // If the question block has extracted image text, append it so the LLM can use it
-    if (imageText && imageText.trim().length > 0) {
-        parsedQuestion += `\n\n[Image text]: ${imageText.trim()}`;
+
+    //FOR ADMIN append image text to QUESTION and ANSWER KEY if exists
+    if (adminImageText && adminImageText.trim().length > 0) {
+        parsedQuestion += `\n\n[Image text]: ${adminImageText.trim()}`;
     }
-  
+
+    //FOR ADMIN append key image text to answer key if exists (this is for cases where the image is part of the answer key, not the question)
+    if (adminKeyImageText && adminKeyImageText.trim().length > 0) {
+        parsedAnswerKey += `\n\n[Image text]: ${adminKeyImageText.trim()}`;
+    }
     try {
-        const result = await gradeWithFusion({ userAnswer: parsedUserAnswer, answerKey: parsedAnswerKey, question: parsedQuestion, questionType, AIPrompt });
-        // const result = await gradeWithDeepSeek({ userAnswer, answerKey, question, questionType, AIPrompt });
+        const result = await gradeWithFusion({ userAnswer: effectiveUserAnswer, answerKey: parsedAnswerKey, question: parsedQuestion, questionType, AIPrompt });
         return res.json(result);
     } catch (err: any) {
         console.error('Grading failed:', err.message);

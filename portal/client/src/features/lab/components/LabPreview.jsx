@@ -5,6 +5,7 @@ import MaterialBlock from './MaterialBlock';
 import QuestionBlock from './QuestionBlock';
 import AIPrompt from './AIPrompt';
 import { generateDisplayNumbers } from '../utils/questionNumbers';
+import { extractAllImagesData } from './fetchImages';
 import "../styles/Lab.css";
 
 function LabPreview({
@@ -166,7 +167,8 @@ function LabPreview({
         let question = '';
         let type = '';
         let generatedTestCode = '';
-        let imageText = '';
+        let adminImageText = '';
+        let adminKeyImageText = '';
 
         for (const block of blocks) {
             //for questions without subquestions
@@ -177,7 +179,8 @@ function LabPreview({
                 question = block.prompt;
                 type = block.type;
                 generatedTestCode = block.generatedTestCode || '';
-                imageText = block.imageText || '';
+                adminImageText = block.imageText || '';
+                adminKeyImageText = block.keyImageText || '';
                 break;
             }
             //for questions with subquestions
@@ -189,26 +192,52 @@ function LabPreview({
                         question = mainPrompt ? `${mainPrompt}\n\n${sq.prompt}` : sq.prompt;
                         type = sq.type;
                         generatedTestCode = sq.generatedTestCode || '';
-                        imageText = sq.imageText || block.imageText || '';
+                        adminImageText = sq.imageText || block.imageText || '';
+                        adminKeyImageText = sq.keyImageText || '';
                         break;
                     }
                 }
             }
         }
 
-        if (!question || !type) return null; 
+        if (!question || !type) return null;
 
         if (!answerKey) { //no answer they then automatic score of 1 and feedback of no answer key provided. This is for non-graded questions where we still want to provide feedback and a score of 1 for completion.
             return { score: 1, feedback: 'Auto-awarded: no answer key provided' };
         }
 
-        //for code questions 
+        // Extract text from any images in the student's answer
+        let studentImageText = '';
+        const images = extractAllImagesData(userAnswer);
+        if (images.length > 0) {
+            const extractedTexts = await Promise.all(
+                images.map(async (imgData, i) => {
+                    try {
+                        const res = await axios.post(`${process.env.REACT_APP_API_LAB_HOST}/lab/extract-image-text`, imgData);
+                        const label = imgData.imageUrl ? imgData.imageUrl.split('/').pop() : `Image ${i + 1}`;
+                        return `[${label}]: ${res.data.text}`;
+                    } catch (err) {
+                        console.error('Failed to extract text from student image', err);
+                        return null;
+                    }
+                })
+            );
+            studentImageText = extractedTexts.filter(Boolean).join('\n');
+            if (studentImageText) {
+                setSession(prev => ({
+                    ...prev,
+                    studentImageTexts: { ...(prev.studentImageTexts || {}), [questionId]: studentImageText }
+                }));
+            }
+        }
+
+        //for code questions
         if (type === 'code') {
             const response = await axios.post(`${process.env.REACT_APP_API_LAB_HOST}/grade/java`, {
                 userAnswer,
                 testCode: generatedTestCode,
                 question,
-                imageText
+                imageText: adminImageText
             });
             return {
                 score: response.data.gradingResults.score,
@@ -223,7 +252,9 @@ function LabPreview({
                 question,
                 questionType: type,
                 AIPrompt: aiPrompt,
-                imageText
+                adminImageText,
+                adminKeyImageText,
+                studentImageText
             });
             return { score: response.data.score, feedback: response.data.feedback };
         }

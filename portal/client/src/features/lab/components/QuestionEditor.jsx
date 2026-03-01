@@ -101,6 +101,13 @@ function QuestionEditor({ q, onQuestionChange, onQuestionDelete, level = 0 }) {
                                                 modules={modules}
                                                 theme="snow"
                                             />
+                                            {q.key && q.key.includes('<img') && (
+                                                <ImageTextBox
+                                                    htmlContent={q.key}
+                                                    imageText={q.keyImageText || ""}
+                                                    onChange={(text) => update("keyImageText", text)}
+                                                />
+                                            )}
                                         </div>
                                     )}
                                 </div>

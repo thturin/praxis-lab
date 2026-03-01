@@ -124,6 +124,14 @@ docker build -t java-grading-sandbox:latest ./lab-creator/server/docker/java-san
 
 The Dockerfile runs a dummy test during build to pre-download Maven/Surefire/JUnit dependencies for offline execution. Rebuild whenever `pom.xml` dependencies change.
 
+## Problems & Solutions Log
+
+When a significant problem is encountered and resolved, add it to `docs/ideas/problems-and-solutions.md`. Include:
+- What the problem was
+- What was tried (including failed attempts)
+- The solution
+- The relevant file(s)
+
 ## Environment Variables
 
 Root `.env` is interpolated by Docker Compose. Key variables:
