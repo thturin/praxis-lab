@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { getImageUrlsFromHtml } from './fetchImages';
+import { resolveImageSrcs } from './fetchImages';
 
 const MaterialBlock = ({ content }) => {
     const [isExpanded, setIsExpanded] = useState(true);
@@ -23,7 +23,7 @@ const MaterialBlock = ({ content }) => {
             {isExpanded && (
                 <div
                     className="px-4 pb-4 leading-relaxed"
-                    dangerouslySetInnerHTML={{ __html: getImageUrlsFromHtml(content) }}
+                    dangerouslySetInnerHTML={{ __html: resolveImageSrcs(content) }}
                 />
             )}
         </div>

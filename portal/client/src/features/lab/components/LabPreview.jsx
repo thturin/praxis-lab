@@ -5,7 +5,7 @@ import MaterialBlock from './MaterialBlock';
 import QuestionBlock from './QuestionBlock';
 import AIPrompt from './AIPrompt';
 import { generateDisplayNumbers } from '../utils/questionNumbers';
-import { extractAllImagesData } from './fetchImages';
+import { extractAllImagesData, uploadBase64Images } from './fetchImages';
 import "../styles/Lab.css";
 
 function LabPreview({
@@ -206,7 +206,18 @@ function LabPreview({
             return { score: 1, feedback: 'Auto-awarded: no answer key provided' };
         }
 
-        // Extract text from any images in the student's answer
+        // Upload any base64 images in the student answer to uploads/sessions/, replace with URLs
+        // This avoids storing large base64 blobs in the DB and ensures consistent URL-based extraction
+        if (userAnswer.includes('data:image')) { //fetchImages.ts
+            userAnswer = await uploadBase64Images(userAnswer);
+            // Update session response with clean URL-based HTML (see docs/plans/session-image-uploads.md for known risks)
+            setSession(prev => ({
+                ...prev,
+                responses: { ...prev.responses, [questionId]: userAnswer }
+            }));
+        }
+
+        // Extract text from any images in the user's answer
         let studentImageText = '';
         const images = extractAllImagesData(userAnswer);
         if (images.length > 0) {

@@ -55,6 +55,8 @@ export const generateTestsForJavaQuestion = async (req: Request, res: Response) 
 };
 //grade a single question using LLM
 //filters out empty answers and missing answer keys
+//gradecontroller is responsible for parsing HTML and appending image text 
+// before sending to gradingService, which is responsible for the actual grading logic (LLM calls, similarity calculations, etc)
 export const gradeQuestion = async (req: Request, res: Response) => {
     const { userAnswer, answerKey, question, questionType, AIPrompt, adminImageText, adminKeyImageText, studentImageText } = req.body;
     const hasUserAnswer = Boolean(userAnswer && userAnswer.trim().length > 0) || Boolean(studentImageText?.trim().length > 0);

@@ -1,6 +1,6 @@
 require('dotenv').config();
 const { PrismaClient } = require('@prisma/client');
-const {processBlockImages} = require('./uploadController');
+const { processBlockImages, saveImageFile } = require('./uploadController');
 const path = require('path');
 const fs = require('fs');
 
@@ -28,7 +28,7 @@ const loadLab = async (req, res) => { //load existing lab or create a new one
         let lab = await prisma.lab.findUnique({
             where: { assignmentId: Number(assignmentId) },
         });
-        if (!lab) { //lab doesn't exist, create a new one 
+        if (!lab) { //lab doesn't exist, create a new one
             console.log('create new lab');
             lab = await prisma.lab.create({
                 data: {
@@ -39,6 +39,11 @@ const loadLab = async (req, res) => { //load existing lab or create a new one
                 }
             })
             console.log('created new empty lab', lab);
+        } else if (title && lab.title !== title) {
+            lab = await prisma.lab.update({
+                where: { assignmentId: Number(assignmentId) },
+                data: { title }
+            });
         }
         return res.json(lab);
     } catch (err) {
@@ -163,4 +168,18 @@ const extractImageText = async (req, res) => {
     }
 };
 
-module.exports = {updateLabPrompt, upsertLab, loadLab, getLabs, deleteLab, getLab, extractImageText };
+const uploadImage = async (req, res) => {
+    try {
+        const { base64Data, mimeType, subfolder = '' } = req.body;
+        if (!base64Data || !mimeType) {
+            return res.status(400).json({ error: 'base64Data and mimeType are required' });
+        }
+        const imageUrl = saveImageFile(base64Data, mimeType, subfolder);
+        return res.json({ imageUrl });
+    } catch (err) {
+        console.error('Error uploading image:', err.message);
+        return res.status(500).json({ error: 'Failed to upload image' });
+    }
+};
+
+module.exports = { updateLabPrompt, upsertLab, loadLab, getLabs, deleteLab, getLab, extractImageText, uploadImage };

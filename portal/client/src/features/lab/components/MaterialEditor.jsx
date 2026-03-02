@@ -1,12 +1,12 @@
 import { useRef, useState } from "react";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
-import { getImageUrlsFromHtml } from './fetchImages';
+import { resolveImageSrcs } from './fetchImages';
 
 
 function MaterialEditor({ block, onMaterialChange, onMaterialDelete }) {
     const quillRef = useRef();
-    const [isExpanded, setIsExpanded] = useState(true);
+    const [isExpanded, setIsExpanded] = useState(false);
 
     const update = (field, value) => {
         //ONCHANGE CREATES A NEW BLOCK OBJECT WITH UPDATED FIELD AND TYPE VALUES 
@@ -50,7 +50,7 @@ function MaterialEditor({ block, onMaterialChange, onMaterialDelete }) {
                         ref={quillRef}
                         placeholder="Paste image or write here"
                         className="w-full border p-2 mb-2"
-                        value={getImageUrlsFromHtml(block.content)}
+                        value={resolveImageSrcs(block.content)}
                         onChange={value => {
                             update("content", value);
                         }}

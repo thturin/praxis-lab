@@ -2,7 +2,7 @@ import { useState } from "react";
 import { createQuestion } from "../models/block";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
-import { getImageUrlsFromHtml } from './fetchImages';
+import { resolveImageSrcs } from './fetchImages';
 import ImageTextBox from './ImageTextBox';
 import axios from 'axios';
 
@@ -11,7 +11,7 @@ function QuestionEditor({ q, onQuestionChange, onQuestionDelete, level = 0 }) {
     const [showAnswerKey, setShowAnswerKey] = useState(false);
     const [showExplanation, setShowExplanation] = useState(false);
     const [showJavaGenerateTestCodeExpansion, setShowJavaGenerateTestCodeExpansion] = useState(false);
-    const [isExpanded, setIsExpanded] = useState(true);
+    const [isExpanded, setIsExpanded] = useState(false);
     const showJavaGenerateTestCode = q.type === 'code';
     //onChange passed down from the parent so everything stays in sync
     //INFINITE LOOP OCCURRING EVERY KEYSTROKE TRIGGERS ONCHANGE
@@ -59,7 +59,7 @@ function QuestionEditor({ q, onQuestionChange, onQuestionDelete, level = 0 }) {
                                 type="text"
                                 placeholder="Prompt"
                                 className="w-full border p-2 mb-2"
-                                value={getImageUrlsFromHtml(q.prompt)}
+                                value={resolveImageSrcs(q.prompt)}
                                 rows={3}
                                 onChange={(value) => {
                                     if (value !== q.prompt) { //do not update if value hasn't changed
@@ -128,7 +128,7 @@ function QuestionEditor({ q, onQuestionChange, onQuestionDelete, level = 0 }) {
                                             <ReactQuill
                                                 placeholder="Explanation for Student"
                                                 className="w-full border mb-2"
-                                                value={getImageUrlsFromHtml(q.explanation) || ""}
+                                                value={resolveImageSrcs(q.explanation) || ""}
                                                 onChange={value => update("explanation", value)}
                                                 modules={modules}
                                                 theme="snow"

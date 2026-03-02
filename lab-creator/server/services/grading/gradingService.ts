@@ -234,7 +234,11 @@ interface LGEResult {
 
 export const evaluateWithLLM = async ({ userAnswer, answerKey, question, questionType, AIPrompt, timeoutMs = 20000 }: GradeParams): Promise<LGEResult> => {
   try {
-    console.log('Here is the question:', question);
+    //console.log('Here is the question:', question);
+    console.log('===================question for LGE:\n', question);
+    console.log('===================end of question for LGE\n');                 
+    console.log('===============user answer for LGE:\n', userAnswer);
+    console.log('===================end of answer for LGE\n');  
     const prompt = buildLGEPrompt({ userAnswer, answerKey, question, questionType, AIPrompt });
     const raw = await callLLM({
       provider: 'deepseek',
@@ -243,7 +247,7 @@ export const evaluateWithLLM = async ({ userAnswer, answerKey, question, questio
         { role: 'user', content: prompt },
       ],
       temperature: 0.2,
-      maxTokens: 400,
+      maxTokens: 1000,
       tools: [{ type: 'function', function: {
         name: 'grade_response',
         description: 'Grade the student response with pass/fail and feedback',
@@ -258,7 +262,14 @@ export const evaluateWithLLM = async ({ userAnswer, answerKey, question, questio
       }}],
       timeout: timeoutMs,
     });
-    const parsed = JSON.parse(raw);
+
+    let parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      console.error('LGE JSON parse failed (response likely truncated). Raw:', raw);
+      return { success: false, error: 'LGE response was truncated — increase maxTokens or shorten feedback' };
+    }
     console.log('---LGE parsed response:', parsed);
     //return success with parsed results or failure with error message
     return { success: true, ...parsed };

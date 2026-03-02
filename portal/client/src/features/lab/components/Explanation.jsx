@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { getImageUrlsFromHtml } from './fetchImages';
+import { resolveImageSrcs } from './fetchImages';
 
 export default function Explanation({ content }) {
     const [isExpanded, setIsExpanded] = useState(false);
@@ -23,7 +23,7 @@ export default function Explanation({ content }) {
             {isExpanded && (
                 <div
                     className="px-3 pb-2 leading-relaxed"
-                    dangerouslySetInnerHTML={{ __html: getImageUrlsFromHtml(content) }}
+                    dangerouslySetInnerHTML={{ __html: resolveImageSrcs(content) }}
                 />
             )}
         </div>

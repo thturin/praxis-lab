@@ -25,7 +25,6 @@ const deleteSession = async (req, res) => {
 const saveSession = async (req, res) => {
     const { session } = req.body;
     const { responses, gradedResults, finalScore, studentImageTexts, userId, labId, labTitle, username } = session;
-    console.log('*******Saving session for labId:', labId, 'userId:', userId);
     if (!labId || !userId) {
         return res.status(400).json({ error: 'Missing labId or userId' });
     }

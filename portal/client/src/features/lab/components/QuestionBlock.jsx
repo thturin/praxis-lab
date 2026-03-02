@@ -3,7 +3,7 @@ import ScoreDisplay from './ScoreDisplay';
 import Explanation from './Explanation';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import { getImageUrlsFromHtml } from './fetchImages';
+import { resolveImageSrcs } from './fetchImages';
 
 
 const SingleQuestionEditor = ({ blockId, responses, setResponses, gradedResults, finalScore, block, showExplanations, isAdmin, sessionId, onScoreUpdated, onGradeSingle, gradingQuestionIds, gradingErrors }) => {
@@ -15,7 +15,7 @@ const SingleQuestionEditor = ({ blockId, responses, setResponses, gradedResults,
         <>
         <ReactQuill
             theme="snow"
-            value={responses[blockId] || ''}
+            value={resolveImageSrcs(responses[blockId] || '')}
             onChange={content => {
                 setResponses(blockId, content);
             }}
@@ -66,11 +66,11 @@ const SubQuestionEditor = ({ question, displayNumber, responses, setResponses, g
                 {displayNumber && (
                     <span className="text-orange-700 mr-2">{displayNumber}.</span>
                 )}
-                <span dangerouslySetInnerHTML={{ __html: getImageUrlsFromHtml(question.prompt) }} />
+                <span dangerouslySetInnerHTML={{ __html: resolveImageSrcs(question.prompt) }} />
             </div>
             <ReactQuill
                 theme="snow"
-                value={responses[question.id] || ''}
+                value={resolveImageSrcs(responses[question.id] || '')}
                 onChange={content => {
                     setResponses(question.id, content);
                 }}
@@ -135,7 +135,7 @@ const QuestionBlock = ({ block, displayNumber, displayNumbers, setResponses, res
                         {displayNumber && (
                             <span className="text-orange-700 mr-2">{displayNumber}.</span>
                         )}
-                        <span dangerouslySetInnerHTML={{ __html: getImageUrlsFromHtml(block.prompt) }} />
+                        <span dangerouslySetInnerHTML={{ __html: resolveImageSrcs(block.prompt) }} />
                     </div>
                     {block.subQuestions.length > 0 ? (
                         <div className="ml-4 border-l-2 pl-2">

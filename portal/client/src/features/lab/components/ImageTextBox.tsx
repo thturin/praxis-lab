@@ -2,6 +2,9 @@ import { useState } from "react";
 import axios from "axios";
 import { extractAllImagesData } from "./fetchImages";
 
+//for displaying image text extraction results and allowing manual edits before sending to grading
+//THIS IS ONLY USED FOR ADMIND IN LAB BUILDER
+
 interface ImageTextBoxProps {
     htmlContent: string;
     imageText: string;

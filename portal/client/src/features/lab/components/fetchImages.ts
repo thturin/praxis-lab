@@ -2,6 +2,88 @@
 const LAB_HOST = process.env.REACT_APP_API_LAB_HOST?.replace('/api', '') ?? '';
 
 
+// Uploads all base64 images in an HTML string to the server, replaces their src with the returned URLs.
+// Used at grade time to persist student response images before vision extraction.
+export const uploadBase64Images = async (htmlString: string, subfolder: string = 'sessions'): Promise<string> => {
+    if (!htmlString || !htmlString.includes('data:image')) return htmlString;
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlString, 'text/html');
+    const imgs = Array.from(doc.querySelectorAll('img'));
+
+    await Promise.all(imgs.map(async (img) => {
+        const src = img.getAttribute('src') ?? '';
+        const imageData = extractImageDataFromSrc(src);
+        if (!imageData?.base64Data) return; // skip already-uploaded images
+        try {
+            const res = await fetch(`${LAB_HOST}/api/lab/upload-image`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ base64Data: imageData.base64Data, mimeType: imageData.mimeType, subfolder }),
+            });
+            const data = await res.json();
+            if (data.imageUrl) img.setAttribute('src', data.imageUrl);
+        } catch (err) {
+            console.error('Failed to upload student image:', err);
+        }
+    }));
+
+    return doc.body.innerHTML;
+};
+
+
+//================image to text for vision LLM================
+interface ImageData {
+    base64Data: string | null;
+    mimeType: string | null;
+    imageUrl: string | null;
+}
+
+const extractImageDataFromSrc = (src: string): ImageData | null => {
+    if (!src) return null;
+
+    // Case 1: freshly pasted base64 image — extract data directly
+    if (src.startsWith('data:')) {
+        const match = src.match(/^data:(image\/[^;]+);base64,(.+)$/s);
+        if (!match) return null;
+        return { base64Data: match[2], mimeType: match[1], imageUrl: null };
+    }
+
+    // Case 2: saved image with /images/ path — send the path, backend reads from disk
+    if (src.startsWith('/images/')) {
+        return { base64Data: null, mimeType: null, imageUrl: src };
+    }
+
+    // Case 3: full URL (already resolved) — extract the /images/ path from it
+    if (src.includes('/images/')) {
+        const imagePath = '/images/' + src.split('/images/')[1];
+        return { base64Data: null, mimeType: null, imageUrl: imagePath };
+    }
+
+    return null;
+};
+
+// Extracts all images from HTML content for the vision LLM.
+export const extractAllImagesData = (htmlString: string = ''): ImageData[] => {
+    if (!htmlString) return [];
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlString, 'text/html');
+    return Array.from(doc.querySelectorAll('img'))
+        .map(img => extractImageDataFromSrc(img.getAttribute('src') ?? ''))
+        .filter((d): d is ImageData => d !== null);
+};
+// Example: given HTML with two images:
+//   <img src="data:image/png;base64,iVBORw0KGgo...">
+//   <img src="/images/bae25eb7e1121019b44210660f5a831c.png">
+// returns:
+//   [
+//     { base64Data: "iVBORw0KGgo...", mimeType: "image/png", imageUrl: null },
+//     { base64Data: null, mimeType: null, imageUrl: "/images/bae25eb7e1121019b44210660f5a831c.png" }
+//   ]
+// Any <img> with no src or unrecognized format is filtered out.
+
+
+
+
 //this function takes an image src and resolves it to a full URL if it's a relative path, or returns it unchanged if it's already an absolute URL or a data URI. It handles three cases:
 //1. If the src is a data URI (starts with "data:"), it returns null, indicating that no change is needed.
 //2. If the src is an absolute URL (starts with "http://" or "https://"), it returns the src unchanged.
@@ -21,12 +103,12 @@ const resolveImageSrc = (src: string | null, labHost: string = LAB_HOST): string
 };
 
 
-//this is used for rendering explanations and question prompts in the lab preview and student view. It replaces any image src that starts with
+//this is used for rendering any text with image urls with . It replaces any image src that starts with
 // /images/ with the full URL to the lab server so that the images can be displayed correctly.
 // or example, it converts src="/images/bae25eb7e1121019b44210660f5a831c.png"
 // to src="http://localhost:14000/images/bae25eb7e1121019b44210660f5a831c.png". It also leaves data URIs and absolute URLs unchanged.
 // -/images/bae25eb7e1121019b44210660f5a831c.png" --> localhost:14000/images/bae...png
-export const getImageUrlsFromHtml = (htmlString: string = ''): string => {
+export const resolveImageSrcs = (htmlString: string = ''): string => {
     if (!htmlString) return '';
     const parser = new DOMParser();
     const doc = parser.parseFromString(htmlString, 'text/html');
@@ -74,53 +156,3 @@ export const inlineImagesAsDataUrls = async (htmlString: string = ''): Promise<s
 
     return doc.body.innerHTML;
 };
-
-//================image to text for vision LLM================
-interface ImageData {
-    base64Data: string | null;
-    mimeType: string | null;
-    imageUrl: string | null;
-}
-
-const extractImageDataFromSrc = (src: string): ImageData | null => {
-    if (!src) return null;
-
-    // Case 1: freshly pasted base64 image — extract data directly
-    if (src.startsWith('data:')) {
-        const match = src.match(/^data:(image\/\w+);base64,(.+)$/);
-        if (!match) return null;
-        return { base64Data: match[2], mimeType: match[1], imageUrl: null };
-    }
-
-    // Case 2: saved image with /images/ path — send the path, backend reads from disk
-    if (src.startsWith('/images/')) {
-        return { base64Data: null, mimeType: null, imageUrl: src };
-    }
-
-    // Case 3: full URL (already resolved) — extract the /images/ path from it
-    if (src.includes('/images/')) {
-        const imagePath = '/images/' + src.split('/images/')[1];
-        return { base64Data: null, mimeType: null, imageUrl: imagePath };
-    }
-
-    return null;
-};
-
-// Extracts all images from HTML content for the vision LLM.
-export const extractAllImagesData = (htmlString: string = ''): ImageData[] => {
-    if (!htmlString) return [];
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(htmlString, 'text/html');
-    return Array.from(doc.querySelectorAll('img'))
-        .map(img => extractImageDataFromSrc(img.getAttribute('src') ?? ''))
-        .filter((d): d is ImageData => d !== null);
-};
-// Example: given HTML with two images:
-//   <img src="data:image/png;base64,iVBORw0KGgo...">
-//   <img src="/images/bae25eb7e1121019b44210660f5a831c.png">
-// returns:
-//   [
-//     { base64Data: "iVBORw0KGgo...", mimeType: "image/png", imageUrl: null },
-//     { base64Data: null, mimeType: null, imageUrl: "/images/bae25eb7e1121019b44210660f5a831c.png" }
-//   ]
-// Any <img> with no src or unrecognized format is filtered out.
