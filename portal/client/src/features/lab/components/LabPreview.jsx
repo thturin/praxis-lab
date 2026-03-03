@@ -217,16 +217,18 @@ function LabPreview({
             }));
         }
 
-        // Extract text from any images in the user's answer
+        // Extract text from any images in the user's answer to translate to text for grading
         let studentImageText = '';
         const images = extractAllImagesData(userAnswer);
+        //console.log('images',images);
+            // {base64Data: null, mimeType: null, imageUrl: '/images/sessions/cf6a5b9d5162ce0c73d7d1e80c8e3862.png'}
+
         if (images.length > 0) {
             const extractedTexts = await Promise.all(
                 images.map(async (imgData, i) => {
                     try {
-                        const res = await axios.post(`${process.env.REACT_APP_API_LAB_HOST}/lab/extract-image-text`, imgData);
-                        const label = imgData.imageUrl ? imgData.imageUrl.split('/').pop() : `Image ${i + 1}`;
-                        return `[${label}]: ${res.data.text}`;
+                        const res = await axios.post(`${process.env.REACT_APP_API_LAB_HOST}/image/extract-text`, imgData);
+                        return `[Screenshot ${i + 1}]: ${res.data.text}`;
                     } catch (err) {
                         console.error('Failed to extract text from student image', err);
                         return null;

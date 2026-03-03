@@ -50,7 +50,7 @@ export const buildLGEPrompt = ({ userAnswer, answerKey, question, questionType, 
     ${AIPrompt ? `\nINSTRUCTOR NOTES:\n${AIPrompt}` : ''}
     Evaluate the student's answer against the reference answer. Does the answer demonstrate correct understanding and cover the key concepts? Answers expressed differently from the reference are acceptable if semantically equivalent.
 
-    Provide concise feedback noting strengths and weaknesses. Use "you" not "the student". Ignore grammar, spelling, and code efficiency.`;
+    Provide concise feedback noting strengths and areas to explore. Use "you" not "the student". Ignore grammar, spelling, and code efficiency. Do not quote or reveal the reference answer in suggestions.`;
     };
 
             // Prompt for generating constructive feedback after cosine similarity verification

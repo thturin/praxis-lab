@@ -236,7 +236,7 @@ export const evaluateWithLLM = async ({ userAnswer, answerKey, question, questio
   try {
     //console.log('Here is the question:', question);
     console.log('===================question for LGE:\n', question);
-    console.log('===================end of question for LGE\n');                 
+    console.log('\n===================end of question for LGE\n');                 
     console.log('===============user answer for LGE:\n', userAnswer);
     console.log('===================end of answer for LGE\n');  
     const prompt = buildLGEPrompt({ userAnswer, answerKey, question, questionType, AIPrompt });

@@ -15,7 +15,7 @@ export const uploadBase64Images = async (htmlString: string, subfolder: string =
         const imageData = extractImageDataFromSrc(src);
         if (!imageData?.base64Data) return; // skip already-uploaded images
         try {
-            const res = await fetch(`${LAB_HOST}/api/lab/upload-image`, {
+            const res = await fetch(`${LAB_HOST}/api/image/upload`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ base64Data: imageData.base64Data, mimeType: imageData.mimeType, subfolder }),
@@ -68,10 +68,11 @@ export const extractAllImagesData = (htmlString: string = ''): ImageData[] => {
     const parser = new DOMParser();
     const doc = parser.parseFromString(htmlString, 'text/html');
     return Array.from(doc.querySelectorAll('img'))
+                        //will exttract img=src or base64
         .map(img => extractImageDataFromSrc(img.getAttribute('src') ?? ''))
         .filter((d): d is ImageData => d !== null);
 };
-// Example: given HTML with two images:
+// EXAMPLE OF RETURN  Example: given HTML with two images:
 //   <img src="data:image/png;base64,iVBORw0KGgo...">
 //   <img src="/images/bae25eb7e1121019b44210660f5a831c.png">
 // returns:
