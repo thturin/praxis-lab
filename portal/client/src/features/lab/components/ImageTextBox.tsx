@@ -29,7 +29,7 @@ function ImageTextBox({ htmlContent, imageText, onChange }: ImageTextBoxProps) {
             const results = await Promise.all(
                 images.map(imageData =>
                     axios.post(
-                        `${process.env.REACT_APP_API_LAB_HOST}/lab/extract-image-text`,
+                        `${process.env.REACT_APP_API_LAB_HOST}/image/extract-text`,
                         {
                             base64Data: imageData.base64Data,
                             mimeType: imageData.mimeType,
