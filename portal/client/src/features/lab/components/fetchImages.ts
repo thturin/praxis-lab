@@ -2,36 +2,6 @@
 const LAB_HOST = process.env.REACT_APP_API_LAB_HOST?.replace('/api', '') ?? '';
 
 
-// Uploads all base64 images in an HTML string to the server, replaces their src with the returned URLs.
-// Used at grade time to persist student response images before vision extraction.
-export const uploadBase64Images = async (htmlString: string, subfolder: string = 'sessions'): Promise<string> => {
-    if (!htmlString || !htmlString.includes('data:image')) return htmlString;
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(htmlString, 'text/html');
-    const imgs = Array.from(doc.querySelectorAll('img'));
-
-    await Promise.all(imgs.map(async (img) => {
-        const src = img.getAttribute('src') ?? '';
-        const imageData = extractImageDataFromSrc(src);
-        if (!imageData?.base64Data) return; // skip already-uploaded images
-        try {
-            const res = await fetch(`${LAB_HOST}/api/image/upload`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ base64Data: imageData.base64Data, mimeType: imageData.mimeType, subfolder }),
-            });
-            const data = await res.json();
-            if (data.imageUrl) img.setAttribute('src', data.imageUrl);
-        } catch (err) {
-            console.error('Failed to upload student image:', err);
-        }
-    }));
-
-    return doc.body.innerHTML;
-};
-
-
-//================image to text for vision LLM================
 interface ImageData {
     base64Data: string | null;
     mimeType: string | null;
@@ -61,6 +31,37 @@ const extractImageDataFromSrc = (src: string): ImageData | null => {
 
     return null;
 };
+
+///=====================copied and pasted base64 image from lab preview or lab builder 
+// Uploads all base64 images in an HTML string to the server, replaces their src with the returned URLs.
+export const uploadBase64Images = async (htmlString: string, subfolder: string = 'sessions'): Promise<string> => {
+    if (!htmlString || !htmlString.includes('data:image')) return htmlString;
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlString, 'text/html');
+    const imgs = Array.from(doc.querySelectorAll('img'));
+
+    await Promise.all(imgs.map(async (img) => {
+        const src = img.getAttribute('src') ?? '';
+        const imageData = extractImageDataFromSrc(src);
+        if (!imageData?.base64Data) return; // skip already-uploaded images
+        try {
+            const res = await fetch(`${LAB_HOST}/api/image/upload`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ base64Data: imageData.base64Data, mimeType: imageData.mimeType, subfolder }),
+            });
+            const data = await res.json();
+            if (data.imageUrl) img.setAttribute('src', data.imageUrl);
+        } catch (err) {
+            console.error('Failed to upload student image:', err);
+        }
+    }));
+
+    return doc.body.innerHTML;
+};
+
+
+
 
 // Extracts all images from HTML content for the vision LLM.
 export const extractAllImagesData = (htmlString: string = ''): ImageData[] => {
@@ -100,6 +101,7 @@ const resolveImageSrc = (src: string | null, labHost: string = LAB_HOST): string
     //"/images/bae25eb7e1121019b44210660f5a831c.png"
     // to "http://localhost:14000/images/bae25eb7e1121019b44210660f5a831c.png"
     if (src.startsWith('/')) return `${labHost}${src}`; // server-hosted upload
+
     return src;
 };
 

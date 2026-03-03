@@ -43,6 +43,7 @@ const extractImageText = async (req, res) => {
             return res.status(400).json({ error: 'Either base64Data+mimeType or imageUrl is required' });
         }
 
+        //console.log(finalBase64, finalMimeType);
         const { analyzeImage } = require('../services/vision/visionService');
         const result = await analyzeImage(finalBase64, finalMimeType);
         return res.json({ text: result.text });

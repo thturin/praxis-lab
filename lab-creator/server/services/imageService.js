@@ -33,6 +33,7 @@ const extractAndSaveImages = (str, subfolder = '') => {
         const mimeType = header.replace('data:', '').replace(';base64', '');
         const imageUrl = saveImageFile(base64, mimeType, subfolder);
         processedStr = processedStr.replace(base64Data, imageUrl);
+        //processedStr example after replacement: <img src="/images/cf6a5b9d5162ce0c73d7d1e80c8e3862.png">
     }
     return processedStr;
 };

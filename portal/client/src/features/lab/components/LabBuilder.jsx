@@ -6,7 +6,7 @@ import AIPrompt from './AIPrompt';
 import "react-quill/dist/quill.snow.css";
 import "../styles/Lab.css";
 import axios from "axios";
-import { inlineImagesAsDataUrls, stripBase64FromBlocks } from "./fetchImages";
+import { inlineImagesAsDataUrls } from "./fetchImages";
 
 
 function LabBuilder({ blocks, setBlocks, 
@@ -74,23 +74,14 @@ function LabBuilder({ blocks, setBlocks,
     }
 
     //useCallBack memoizes (cashes) and only recreates it when its dependencies change 
-    const saveLab = useCallback(async (stripImages = false) => {
-        const lab = { title, blocks: stripImages ? stripBase64FromBlocks(blocks) : blocks, assignmentId };
+    const saveLab = useCallback(async () => {
+        const lab = { title, blocks, assignmentId };
         try {
             await axios.post(`${process.env.REACT_APP_API_LAB_HOST}/lab/upsert-lab`, lab);
         } catch (err) {
             console.error('Error trying to upsert (save) lab to api', err);
         }
     }, [title, blocks, assignmentId]);
-
- //AUTO SAVE
-    useEffect(() => {
-        const id = setInterval(() => {
-            saveLab(true); // strip base64 images — disk writes only on explicit Save
-            console.log('autosaved!');
-        }, 60000); //autosave every 60 sec
-        return () => clearInterval(id);
-    }, [saveLab]);
 
 
     const loadLabFromUserFile = (event) => {

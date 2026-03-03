@@ -96,7 +96,7 @@ function QuestionEditor({ q, onQuestionChange, onQuestionDelete, level = 0 }) {
                                             <ReactQuill
                                                 placeholder="Admin Key"
                                                 className="w-full border mb-2"
-                                                value={q.key || ""}
+                                                value={resolveImageSrcs(q.key) || ""}
                                                 onChange={value => update("key", value)}
                                                 modules={modules}
                                                 theme="snow"
