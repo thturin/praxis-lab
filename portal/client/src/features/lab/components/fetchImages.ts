@@ -157,3 +157,37 @@ export const inlineImagesAsDataUrls = async (htmlString: string = ''): Promise<s
 
     return doc.body.innerHTML;
 };
+
+// Strip base64 <img> tags from HTML string — used before autosave to avoid writing images to disk
+export const stripBase64Images = (html: string): string => {
+    if (!html || !html.includes('data:image')) return html;
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    doc.querySelectorAll('img').forEach(img => {
+        if (img.getAttribute('src')?.startsWith('data:')) img.remove();
+    });
+    return doc.body.innerHTML;
+};
+
+// Strip base64 images from all HTML fields in a blocks array
+export const stripBase64FromBlocks = (blocks: any[]): any[] =>
+    blocks.map(block => {
+        if (block.blockType === 'material') {
+            return { ...block, content: stripBase64Images(block.content || '') };
+        }
+        if (block.blockType === 'question') {
+            return {
+                ...block,
+                prompt: stripBase64Images(block.prompt || ''),
+                key: stripBase64Images(block.key || ''),
+                explanation: stripBase64Images(block.explanation || ''),
+                subQuestions: (block.subQuestions || []).map((sq: any) => ({
+                    ...sq,
+                    prompt: stripBase64Images(sq.prompt || ''),
+                    key: stripBase64Images(sq.key || ''),
+                    explanation: stripBase64Images(sq.explanation || ''),
+                })),
+            };
+        }
+        return block;
+    });
