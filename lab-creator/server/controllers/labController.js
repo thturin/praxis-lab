@@ -1,6 +1,6 @@
 require('dotenv').config();
 const { PrismaClient } = require('@prisma/client');
-const { processBlockImages } = require('../services/imageService');
+const { processBlockImages } = require('../services/images/imageService');
 const path = require('path');
 const fs = require('fs');
 

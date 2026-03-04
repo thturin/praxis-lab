@@ -1,7 +1,26 @@
 const path = require('path');
 const fs = require('fs');
-const { saveImageFile } = require('../services/imageService');
+const { saveImageFile, extractAndSaveImages } = require('../services/images/imageService');
 
+
+
+//==========FOR HTML STRING IMAGE UPLOAD (STUDENT RESPONSES)===========
+const uploadHtmlImages = async (req, res) => {
+    try {
+        const { htmlString, subfolder = 'sessions' } = req.body;
+        if (!htmlString) {
+            return res.status(400).json({ error: 'htmlString is required' });
+        }
+        const processedHtml = extractAndSaveImages(htmlString, subfolder);
+        return res.json({ html: processedHtml });
+    } catch (err) {
+        console.error('Error processing HTML images:', err.message);
+        return res.status(500).json({ error: 'Failed to process HTML images' });
+    }
+};
+
+
+//==========FOR IMAGE UPLOAD IN LAB SAVE===========
 const uploadImage = async (req, res) => {
     try {
         const { base64Data, mimeType, subfolder = '' } = req.body;
@@ -16,6 +35,8 @@ const uploadImage = async (req, res) => {
     }
 };
 
+
+//==========FOR VISION EXTRACTION===========
 const extractImageText = async (req, res) => {
     try {
         const { base64Data, mimeType, imageUrl } = req.body;
@@ -53,4 +74,6 @@ const extractImageText = async (req, res) => {
     }
 };
 
-module.exports = { uploadImage, extractImageText };
+
+
+module.exports = { uploadImage, extractImageText, uploadHtmlImages };
