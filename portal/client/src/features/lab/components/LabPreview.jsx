@@ -209,13 +209,17 @@ function LabPreview({
         // Upload any base64 images in the student answer to uploads/sessions/, replace with URLs
         // This avoids storing large base64 blobs in the DB and ensures consistent URL-based extraction
         if (userAnswer.includes('data:image')) {
-            const res = await axios.post(`${process.env.REACT_APP_API_LAB_HOST}/image/upload-html`, { htmlString: userAnswer, subfolder: 'sessions' });
-            userAnswer = res.data.html;
-            // Update session response with clean URL-based HTML (see docs/plans/session-image-uploads.md for known risks)
-            setSession(prev => ({
-                ...prev,
-                responses: { ...prev.responses, [questionId]: userAnswer }
-            }));
+            try {
+                const res = await axios.post(`${process.env.REACT_APP_API_LAB_HOST}/image/upload-html`, { htmlString: userAnswer, subfolder: 'sessions' });
+                userAnswer = res.data.html;
+                // Update session response with clean URL-based HTML (see docs/plans/session-image-uploads.md for known risks)
+                setSession(prev => ({
+                    ...prev,
+                    responses: { ...prev.responses, [questionId]: userAnswer }
+                }));
+            } catch (err) {
+                console.error('Failed to upload student images:', err);
+            }
         }
 
         // Extract text from any images in the user's answer to translate to text for grading

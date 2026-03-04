@@ -4,7 +4,7 @@ import fs from 'fs';
 
 //SERVER-SIDE UTILITIES FOR HANDLING IMAGES IN LAB BUILDER:
 
-const uploadsDir = path.join(__dirname, '../uploads');
+const uploadsDir = path.join(__dirname, '../../uploads');
 if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
 }
