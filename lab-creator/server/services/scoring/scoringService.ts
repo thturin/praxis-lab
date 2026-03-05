@@ -4,15 +4,6 @@ interface RubricScores {
   feedback: string;
 }
 
-interface BinaryScoreResult {
-  score: number;
-  result: string;
-  breakdown: {
-    answerQuality: string;
-    compliance: string;
-  };
-}
-
 interface GradedResult {
   score?: number;
   feedback?: string;
@@ -24,23 +15,7 @@ interface FinalScore {
   totalScore: number;
 }
 
-export const calculateBinaryScore = (rubricScores: RubricScores): BinaryScoreResult => {
-  const allPass =
-    rubricScores.answerQuality === 'PASS' &&
-    rubricScores.compliance === 'PASS';
 
-  const score = allPass ? 1.0 : 0.0;
-  const result = allPass ? 'PASS' : 'FAIL';
-
-  return {
-    score,
-    result,
-    breakdown: {
-      answerQuality: rubricScores.answerQuality,
-      compliance: rubricScores.compliance
-    }
-  };
-};
 
 // Computes final score from graded results
 //this is used in gradeController.js regradeSession redis
@@ -62,4 +37,4 @@ export const computeFinalScore = (gradedResults: Record<string, GradedResult>): 
 //The fix is to use proper export on each function. 
 // Since your tsconfig has "module": "commonjs", tsx compiles export 
 // const to exports.foo = ..., so require() still works.
-//module.exports = { parseScoreFeedback, parseBinaryRubricResponse, calculateBinaryScore, computeFinalScore };
+//module.exports = { parseScoreFeedback, parseBinaryRubricResponse, computeFinalScore };

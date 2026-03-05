@@ -68,13 +68,47 @@ async function callLLM({ provider = 'deepseek', model, messages, temperature = 0
     timeout,
   });
 
-  // If tools were used, extract the function call arguments
+
+
+  // If tools were used, extract the function call arguments.
+  // DeepSeek occasionally ignores tool_choice and puts the response in message.content instead.
   if (tools) {
-    return response.data?.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments || '';
+    const toolArgs = response.data?.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
+    const content = response.data?.choices?.[0]?.message?.content;
+    return toolArgs || content || '';
   }
 
   return response.data?.choices?.[0]?.message?.content || '';
 }
+
+// Normal case (tool_calls present):                                                                                                                                
+//   {                                                                                                                                                                
+//     "choices": [{                                                                                                                                                  
+//       "message": {                                                                                                                                                 
+//         "tool_calls": [{                                                                                                                                           
+//           "function": {
+//             "arguments": "{\"answerQuality\": \"pass\", \"feedback\": \"Good answer.\"}"                                                                           
+//           }                                                                                                                                                        
+//         }],                                                                                                                                                        
+//         "content": null                                                                                                                                            
+//       }                                                                                                                                                            
+//     }]                                                                                                                                                             
+//   }                                                                                                                                                                
+//   → tool_calls[0].function.arguments = '{"answerQuality": "pass", "feedback": "Good answer."}' ✅                                                                  
+                                                                                                                                                                   
+//   Intermittent broken case (DeepSeek ignores tool_choice):                                                                                                         
+//   {                                                                                                                                                                
+//     "choices": [{                                                                                                                                                  
+//       "message": {                                                                                                                                                 
+//         "tool_calls": null,                                                                                                                                        
+//         "content": "{\"answerQuality\": \"pass\", \"feedback\": \"Good answer.\"}"                                                                                 
+//       }                                                                                                                                                            
+//     }]                                                                                                                                                             
+//   }
+//   → tool_calls?.[0]?.function?.arguments = undefined → falls back to '' → JSON.parse('') throws ❌
+
+
+
 
 // Separate function for calling embedding models 
 //returns  the two items in the data list as arrays of numbers (the embeddings for the two input texts)

@@ -81,7 +81,6 @@ const worker = new Worker('submission-regrade', async job => {
         await job.updateProgress(Math.round((i / submissions.length) * 100));
         console.log(`Regrading submission ${i + 1}/${submissions.length} (user: ${submission.user?.username})`);
 
-        //this code is copied and pasted from lab preview handleSubmit function. 
         try {
             if (assignment.type === 'github') {
                 //put github repos into temp directory
@@ -94,17 +93,6 @@ const worker = new Worker('submission-regrade', async job => {
                     assignment.dueDate
                 );
 
-                //IF A DRY RUN, DO NOT UPDATE SUBMISSIONS
-                // if (dryRun) {
-                //     summary = {
-                //         submissionId: submission.id,
-                //         user: submission.user?.username,
-                //         type: 'github',
-                //         result
-                //     };
-                //     await job.log(JSON.stringify(summary));
-                //     dryRunSummaries.push(summary);
-                // } else {
                     await prisma.submission.update({
                         where: { id: submission.id },
                         data: {
@@ -123,53 +111,6 @@ const worker = new Worker('submission-regrade', async job => {
                         username: submission.user?.username
                     }
                 });
-                //need to get aiPrompt
-                const labResponse = await axios.get(`${process.env.LAB_CREATOR_API_URL}/lab/load-lab`, {
-                    params: { assignmentId: submission.assignmentId }
-                });
-                if (!labResponse) {
-                    console.error(`Lab missing for submission ${submission.id}`);
-                    continue;
-                }
-                const { aiPrompt, blocks = [] } = labResponse.data;
-
-                //filter all questions and sub questions into a single array
-                const allQuestions = [];
-
-                blocks.forEach(block => {
-                    if (block.blockType !== 'question') return;
-
-                    const scoredSubQuestions = (block.subQuestions || []).filter(sq => sq.isScored);
-
-                    if (scoredSubQuestions?.length) {
-                        // Add sub-questions with parent prompt included
-                        //ADD MAIN QUESTION PROMPT TO EACH SUB QUESTION TO PROVIDE MORE CONTEXT FOR GRADING
-                        scoredSubQuestions.forEach(sq => {
-                            allQuestions.push({
-                                ...sq,
-                                prompt: block.prompt
-                                    ? `${block.prompt}\n\n${sq.prompt}`
-                                    : sq.prompt
-                            });
-                        });
-                    } else {
-                        // Regular question (no sub-questions)
-                        if (block.isScored) {
-                            allQuestions.push(block);
-                        }
-                    }
-                });
-
-                //create a new array of objects that contain the prompt, key, type, and generatedTestCode
-                const questionLookup = allQuestions.reduce((acc, question) => {
-                    acc[question.id] = {
-                        prompt: question.prompt,
-                        key: question.key,
-                        type: question.type,
-                        generatedTestCode: question.generatedTestCode
-                    };
-                    return acc;
-                }, {});
 
                 const session = sessionResponse.data.session;
                 if (!session) {
@@ -177,32 +118,17 @@ const worker = new Worker('submission-regrade', async job => {
                     continue;
                 }
 
-                // Regrade via lab API GRADECONTROLLER
-                //regradeSession in gradeController.js
+                // Regrade via lab-creator API — lab fetching and questionLookup building happens there
                 const regradeResponse = await axios.post(`${process.env.LAB_CREATOR_API_URL}/grade/regrade`, {
                     responses: session.responses,
-                    questionLookup,
                     userId: submission.userId,
                     labId: assignment.labId,
-                    dryRun,
-                    aiPrompt
+                    dryRun
                 });
 
                 const regradeResult = regradeResponse.data || {};
 
-                // if (dryRun) {
-                //     summary = {
-                //         submissionId: submission.id,
-                //         user: submission.user?.username,
-                //         type: 'lab',
-                //         gradedResults: regradeResult.gradedResults || {},
-                //         finalScore: regradeResult.finalScore || null
-                //     };
-                //     console.log(`User ${submission.user?.username} dryRun summary->>${JSON.stringify(summary)}`);
-                //     await job.log(JSON.stringify(summary));
-                //     dryRunSummaries.push(summary);
-               // } else {
-                    //update the submission's rawScore and score
+
                     const rawScore = Number(regradeResult.finalScore?.percent) || 0;
                     await prisma.submission.update({
                         where: { id: submission.id },
@@ -227,9 +153,7 @@ const worker = new Worker('submission-regrade', async job => {
     await job.updateProgress(100);
     console.log(`Completed regrading ${submissions.length} submissions`);
 
-    // if (dryRun) {
-    //     return { summaries: dryRunSummaries, count: dryRunSummaries.length };
-    // }
+  
     return { success: true, count: submissions.length };
 
 }, {

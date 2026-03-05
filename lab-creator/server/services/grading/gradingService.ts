@@ -1,6 +1,7 @@
 const { callLLM, callEmbeddingModel } = require('../llm/llmClient');
 const { compileAndRunJavaWithTests } = require('../docker/dockerExecutionService');
 const { buildLGEPrompt, buildJUnitTestPrompt, buildAnalyzeStudentCodePrompt, buildCosineFeedbackPrompt, buildKeyPointsExtractionPrompt, buildPseudoQuestionPrompt } = require('../prompts/gradingPrompts');
+const { parseTextFromHtml } = require('../../utils/parseHtml');
 
 
 
@@ -262,7 +263,6 @@ export const evaluateWithLLM = async ({ userAnswer, answerKey, question, questio
       }}],
       timeout: timeoutMs,
     });
-
     let parsed;
     try {
       parsed = JSON.parse(raw);
@@ -270,7 +270,7 @@ export const evaluateWithLLM = async ({ userAnswer, answerKey, question, questio
       console.error('LGE JSON parse failed (response likely truncated). Raw:', raw);
       return { success: false, error: 'LGE response was truncated — increase maxTokens or shorten feedback' };
     }
-    console.log('---LGE parsed response:', parsed);
+    console.log('*****************LGE parsed response:', parsed);
     //return success with parsed results or failure with error message
     return { success: true, ...parsed };
   } catch (err: any) {
@@ -396,9 +396,6 @@ export const gradeWithFusion = async ({ userAnswer, answerKey, question, questio
 };
 
 
-
-
-
 ///=============CODE QUESTIONS GRADING WITH JUNIT TESTS + LLM FEEDBACK ANALYSIS =============
 // Generate JUnit test code using LLM
 export const generateJUnitTests = async ({ problemDescription, answerKey }: GenerateJUnitTestsParams): Promise<string> => {
@@ -522,5 +519,66 @@ export const gradeJavaCode = async ({ studentCode, problemDescription, testCode 
 }
 
 
+
+
+export interface GradeTextQuestionParams {
+  userAnswer: string;
+  answerKey: string;
+  question: string;
+  questionType: string;
+  studentImageText?: string;
+  adminImageText?: string;
+  adminKeyImageText?: string;
+}
+
+export interface GradeTextQuestionResult {
+  score: number;
+  feedback: string;
+  skipped?: boolean;
+}
+
+// Shared grading logic for a single text question.
+// Used by both gradeQuestion (per-request) and regradeSession (batch).
+export const gradeTextQuestion = async (params: GradeTextQuestionParams): Promise<GradeTextQuestionResult> => {
+  const { userAnswer, answerKey, question, questionType, studentImageText, adminImageText, adminKeyImageText } = params;
+
+  const parsedUserAnswer = parseTextFromHtml(userAnswer);
+  const effectiveUserAnswer = [parsedUserAnswer, studentImageText].filter(Boolean).join('\n\n');
+
+  if (!effectiveUserAnswer.trim()) return { score: 0, feedback: 'No response submitted', skipped: true };
+  if (!answerKey?.trim()) return { score: 1, feedback: 'Answer key missing; awarding full credit', skipped: true };
+
+  let parsedQuestion = parseTextFromHtml(question);
+  if (adminImageText?.trim()) parsedQuestion += `\n\n[Image text]: ${adminImageText.trim()}`;
+
+  let parsedAnswerKey = parseTextFromHtml(answerKey);
+  if (adminKeyImageText?.trim()) parsedAnswerKey += `\n\n[Image text]: ${adminKeyImageText.trim()}`;
+
+  const result = await gradeWithFusion({ userAnswer: effectiveUserAnswer, answerKey: parsedAnswerKey, question: parsedQuestion, questionType, AIPrompt: '' });
+  return { score: result.score, feedback: result.feedback };
+};
+
+export interface GradeJavaQuestionParams {
+  userAnswer: string;
+  testCode: string;
+  question: string;
+  imageText?: string;
+}
+
+// Shared grading logic for a single Java code question.
+// Used by both gradeJavaQuestion (per-request) and regradeSession (batch).
+export const gradeJavaQuestionService = async (params: GradeJavaQuestionParams) => {
+  const { parseCodeFromHtml } = require('../../utils/parseHtml');
+  const { userAnswer, testCode, question, imageText } = params;
+
+  let problemDescription = parseTextFromHtml(question);
+  if (imageText?.trim()) problemDescription += `\n\n[Image text]: ${imageText.trim()}`;
+
+  return gradeJavaCode({
+    studentCode: parseCodeFromHtml(userAnswer),
+    problemDescription,
+    testCode
+  });
+};
 
 //module.exports = { gradeWithFusion, gradeJavaCode, computeFinalScore, generateJUnitTests, calculateEmbeddingSimilarity };

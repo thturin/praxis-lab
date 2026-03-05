@@ -1,6 +1,6 @@
 require('dotenv').config();
 const { PrismaClient } = require('@prisma/client');
-const { gradeWithFusion, calculateEmbeddingSimilarity, generateJUnitTests, gradeJavaCode } = require('../services/grading/gradingService');
+const { generateJUnitTests, gradeTextQuestion, gradeJavaQuestion: gradeJavaQuestionService } = require('../services/grading/gradingService');
 const { computeFinalScore } = require('../services/scoring/scoringService');
 const { parseCodeFromHtml, parseTextFromHtml } = require('../utils/parseHtml');
 const prisma = new PrismaClient();
@@ -58,34 +58,9 @@ export const generateTestsForJavaQuestion = async (req: Request, res: Response) 
 //gradecontroller is responsible for parsing HTML and appending image text 
 // before sending to gradingService, which is responsible for the actual grading logic (LLM calls, similarity calculations, etc)
 export const gradeQuestion = async (req: Request, res: Response) => {
-    const { userAnswer, answerKey, question, questionType, AIPrompt, adminImageText, adminKeyImageText, studentImageText } = req.body;
-    const hasUserAnswer = Boolean(userAnswer && userAnswer.trim().length > 0) || Boolean(studentImageText?.trim().length > 0);
-    const hasAnswerKey = Boolean(answerKey && answerKey.trim().length > 0);
-    if (!hasUserAnswer) {
-        return res.status(400).json({ score: 0, feedback: 'No response submitted' });
-    }
-    if (!hasAnswerKey) {
-        return res.status(400).json({ score: 1, feedback: 'Answer key missing; awarding full credit' });
-    }
-    //remove html tags from userAnswer and answerKey before sending to gradingService
-    const parsedUserAnswer = parseTextFromHtml(userAnswer);
-    //combine user answers and student image text (if exists) for grading
-    const effectiveUserAnswer = [parsedUserAnswer, studentImageText].filter(Boolean).join('\n\n');
-    //remove html tags from answerKey and question, and append image text if exists, before sending to gradingService
-    let parsedAnswerKey = parseTextFromHtml(answerKey);
-    let parsedQuestion = parseTextFromHtml(question);
-
-    //FOR ADMIN append image text to QUESTION and ANSWER KEY if exists
-    if (adminImageText && adminImageText.trim().length > 0) {
-        parsedQuestion += `\n\n[Image text]: ${adminImageText.trim()}`;
-    }
-
-    //FOR ADMIN append key image text to answer key if exists (this is for cases where the image is part of the answer key, not the question)
-    if (adminKeyImageText && adminKeyImageText.trim().length > 0) {
-        parsedAnswerKey += `\n\n[Image text]: ${adminKeyImageText.trim()}`;
-    }
+    const { userAnswer, answerKey, question, questionType, adminImageText, adminKeyImageText, studentImageText } = req.body;
     try {
-        const result = await gradeWithFusion({ userAnswer: effectiveUserAnswer, answerKey: parsedAnswerKey, question: parsedQuestion, questionType, AIPrompt });
+        const result = await gradeTextQuestion({ userAnswer, answerKey, question, questionType, studentImageText, adminImageText, adminKeyImageText });
         return res.json(result);
     } catch (err: any) {
         console.error('Grading failed:', err.message);
@@ -95,17 +70,8 @@ export const gradeQuestion = async (req: Request, res: Response) => {
 
 export const gradeJavaQuestion = async (req: Request, res: Response) => {
     const { userAnswer, testCode, question, imageText } = req.body;
-
     try {
-        let problemDescription = parseTextFromHtml(question);
-        if (imageText && imageText.trim().length > 0) {
-            problemDescription += `\n\n[Image text]: ${imageText.trim()}`;
-        }
-        const result = await gradeJavaCode({
-            studentCode: parseCodeFromHtml(userAnswer),
-            problemDescription,
-            testCode
-        });
+        const result = await gradeJavaQuestionService({ userAnswer, testCode, question, imageText });
         res.json(result);
     } catch (err: any) {
         console.error('Error in gradeJavaCode controller', err.message);
@@ -126,16 +92,41 @@ export const gradeSession = async (req: Request, res: Response) => {
 }
 
 //this is called asynchronously with redis
-//YOU ARE NOW USING A PARSED VERSION OF THE HTML
-//THIS MIGHT CAUSE ISSUES IN THE FUTURE? DONT FORGET
+//currently dry run and late penalty are disabled
 export const regradeSession = async (req: Request, res: Response) => {
-    const { labId, userId, responses, questionLookup, dryRun = true, aiPrompt, includeLatePenalty = false } = req.body;
-    if (!labId || !userId || !responses || !questionLookup) {
-        return res.status(400).json({ error: 'labId, userId, responses, questionLookup are required' });
+    const { labId, userId, responses, dryRun = true, includeLatePenalty = false } = req.body;
+    if (!labId || !userId || !responses) {
+        return res.status(400).json({ error: 'labId, userId, responses are required' });
     }
 
     try {
-        const regradedResults: Record<string, any> = {};
+        // Fetch lab and session in parallel
+        const [lab, session] = await Promise.all([
+            prisma.lab.findUnique({ where: { id: labId } }),
+            prisma.session.findUnique({ where: { labId_userId: { labId, userId } } })
+        ]);
+        if (!lab) return res.status(404).json({ error: `Lab ${labId} not found` });
+        const studentImageTexts: Record<string, string> = (session?.studentImageTexts as any) || {};
+
+        const blocks: any[] = Array.isArray(lab.blocks) ? lab.blocks : [];
+        const questionLookup: Record<string, any> = {};
+
+        blocks.forEach((block: any) => {
+            if (block.blockType !== 'question') return;
+            const scoredSubQuestions = (block.subQuestions || []).filter((sq: any) => sq.isScored);
+            if (scoredSubQuestions.length) {
+                scoredSubQuestions.forEach((sq: any) => {
+                    questionLookup[sq.id] = {
+                        ...sq,
+                        prompt: block.prompt ? `${block.prompt}\n\n${sq.prompt}` : sq.prompt
+                    };
+                });
+            } else if (block.isScored) {
+                questionLookup[block.id] = block;
+            }
+        });
+
+        const regradedResults: Record<string, any> = {}; // questionId -> { score, feedback, testResults? }
 
         for (const [questionId, userAnswer] of Object.entries(responses) as [string, any][]) {
             const details = questionLookup[questionId];
@@ -150,11 +141,11 @@ export const regradeSession = async (req: Request, res: Response) => {
                 // Route to appropriate grading function based on question type
                 if (details.type === 'code' && details.generatedTestCode) {
                     console.log(`Grading Java code question ${questionId} using JUnit tests`);
-                    // Use JUnit test-based grading for Java code questions
-                    result = await gradeJavaCode({
-                        studentCode: parseCodeFromHtml(userAnswer),
-                        problemDescription: parseTextFromHtml(details.prompt),
-                        testCode: details.generatedTestCode
+                    result = await gradeJavaQuestionService({
+                        userAnswer,
+                        testCode: details.generatedTestCode,
+                        question: details.prompt,
+                        imageText: details.imageText
                     });
                     regradedResults[questionId] = {
                         score: result.gradingResults.score,
@@ -163,13 +154,14 @@ export const regradeSession = async (req: Request, res: Response) => {
                     };
 
                 } else {
-                    // Use binary rubric grading for all other questions
-                    result = await gradeWithFusion({
-                        userAnswer: parseCodeFromHtml(userAnswer),
-                        answerKey: parseCodeFromHtml(details.key),
-                        question: parseTextFromHtml(details.prompt),
+                    result = await gradeTextQuestion({
+                        userAnswer,
+                        answerKey: details.key,
+                        question: details.prompt,
                         questionType: details.type,
-                        AIPrompt: aiPrompt
+                        studentImageText: studentImageTexts[questionId],
+                        adminImageText: details.imageText,
+                        adminKeyImageText: details.keyImageText,
                     });
 
                     regradedResults[questionId] = {
@@ -177,8 +169,6 @@ export const regradeSession = async (req: Request, res: Response) => {
                         feedback: result.feedback
                     };
                 }
-
-
 
                 //30+ simultaneous deepseek requests get
                 //Error grading question 1765678253268 during regrade getaddrinfo EAI_AGAIN api.deepseek.com
@@ -192,17 +182,19 @@ export const regradeSession = async (req: Request, res: Response) => {
             }
         }
 
-        const finalScore = computeFinalScore(regradedResults);
+        // Ensure all scored questions appear in results, even if student left them blank
+        for (const questionId of Object.keys(questionLookup)) {
+            if (!regradedResults[questionId]) {
+                regradedResults[questionId] = { score: 0, feedback: 'No response submitted' };
+            }
+        }
 
+        const finalScore = computeFinalScore(regradedResults);
         const responsePayload = {
             gradedResults: regradedResults,
             finalScore,
             rawScore: finalScore.totalScore
         };
-
-        // if (dryRun) { //if the admin is doing dryRun, return data
-        //     return res.json(responsePayload);
-        // }
 
         const updatedSession = await prisma.session.update({
             where: { labId_userId: { labId, userId } },
