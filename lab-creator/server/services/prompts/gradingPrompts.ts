@@ -150,34 +150,28 @@ export const buildJUnitTestPrompt = ({ problemDescription, answerKey }: BuildJUn
 
 // Analyze student code prompt for score and feedback
 export const buildAnalyzeStudentCodePrompt = ({ problemDescription, studentCode, testResults, testOutput }: BuildAnalyzeStudentCodePromptParams): string => {
-  return `Grade this Java programming submission:
+  return `You are grading a Java programming submission. Provide feedback based on the test results below.
 
-            Problem: ${problemDescription}
+        Problem: ${problemDescription}
 
-            The student's class and constructor name is "Solution" because the
-            code was renamed for grading purposes.Do not mention this in your feedback.
-            The class does not have to be named the same as in the problem description.
+        Note: the student's class is named "Solution" for grading purposes — do not mention this.
 
-            Student Code:
-            ${studentCode}
+        Student Code:
+        ${studentCode}
 
-            Test Results:
-            - Total Tests: ${testResults.totalTests}
-            - Passed: ${testResults.passed}
-            - Failed: ${testResults.failed}
+        Test Results:
+        - Total Tests: ${testResults.totalTests}
+        - Passed: ${testResults.passed}
+        - Failed: ${testResults.failed}
 
-            Test Output:
-            ${testOutput.substring(0, 1000)}
+        Test Output:
+        ${testOutput.substring(0, 1000)}
 
-            Provide:
-            1. Overall score (0-1) - calculate it by the number of passed tests over total tests.
-            2. Constructive feedback on what worked and what didn't
-            3. Specific suggestions for improvement of the student's code (not the test cases)
-            4. Wrap feedback and suggestion in the same key "feedback"
-
-            IMPORTANT:
-            - Use "You" not "the student" in feedback.
-            - You grade them ONLY based on the provided test results. Do not consider code style, efficiency, or other factors not reflected in the test results.
-
-            `;
+        Your feedback should:
+        - Identify which tests failed and what they were testing
+        - Explain the underlying misconception or logic error — do NOT write or suggest actual code
+        - Point the student toward the area of their code to revisit
+        - Acknowledge what passed
+        - Use "You" not "the student"
+        `;
 };

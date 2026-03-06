@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import ScoreDisplay from './ScoreDisplay';
+import { ScoreDisplay } from './ScoreDisplay';
 import Explanation from './Explanation';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';

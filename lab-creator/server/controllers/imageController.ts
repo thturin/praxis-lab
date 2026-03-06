@@ -1,11 +1,12 @@
-const path = require('path');
-const fs = require('fs');
-const { saveImageFile, extractAndSaveImages } = require('../services/images/imageService');
-
+import path from 'path';
+import fs from 'fs';
+import { Request, Response } from 'express';
+import { saveImageFile, extractAndSaveImages } from '../services/images/imageService';
+import { analyzeImage } from '../services/vision/visionService';
 
 
 //==========FOR HTML STRING IMAGE UPLOAD (STUDENT RESPONSES)===========
-const uploadHtmlImages = async (req, res) => {
+export const uploadHtmlImages = async (req: Request, res: Response) => {
     try {
         const { htmlString, subfolder = 'sessions' } = req.body;
         if (!htmlString) {
@@ -13,7 +14,7 @@ const uploadHtmlImages = async (req, res) => {
         }
         const processedHtml = extractAndSaveImages(htmlString, subfolder);
         return res.json({ html: processedHtml });
-    } catch (err) {
+    } catch (err: any) {
         console.error('Error processing HTML images:', err.message);
         return res.status(500).json({ error: 'Failed to process HTML images' });
     }
@@ -21,7 +22,7 @@ const uploadHtmlImages = async (req, res) => {
 
 
 //==========FOR IMAGE UPLOAD IN LAB SAVE===========
-const uploadImage = async (req, res) => {
+export const uploadImage = async (req: Request, res: Response) => {
     try {
         const { base64Data, mimeType, subfolder = '' } = req.body;
         if (!base64Data || !mimeType) {
@@ -29,7 +30,7 @@ const uploadImage = async (req, res) => {
         }
         const imageUrl = saveImageFile(base64Data, mimeType, subfolder);
         return res.json({ imageUrl });
-    } catch (err) {
+    } catch (err: any) {
         console.error('Error uploading image:', err.message);
         return res.status(500).json({ error: 'Failed to upload image' });
     }
@@ -37,12 +38,12 @@ const uploadImage = async (req, res) => {
 
 
 //==========FOR VISION EXTRACTION===========
-const extractImageText = async (req, res) => {
+export const extractImageText = async (req: Request, res: Response) => {
     try {
         const { base64Data, mimeType, imageUrl } = req.body;
 
-        let finalBase64 = base64Data;
-        let finalMimeType = mimeType;
+        let finalBase64: string = base64Data;
+        let finalMimeType: string = mimeType;
 
         if (!finalBase64 && imageUrl) {
             const filename = imageUrl.replace('/images/', '');
@@ -56,7 +57,7 @@ const extractImageText = async (req, res) => {
             finalBase64 = fileBuffer.toString('base64');
 
             const ext = path.extname(filename).toLowerCase();
-            const mimeTypes = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.webp': 'image/webp' };
+            const mimeTypes: Record<string, string> = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.webp': 'image/webp' };
             finalMimeType = mimeTypes[ext] || 'image/png';
         }
 
@@ -64,16 +65,10 @@ const extractImageText = async (req, res) => {
             return res.status(400).json({ error: 'Either base64Data+mimeType or imageUrl is required' });
         }
 
-        //console.log(finalBase64, finalMimeType);
-        const { analyzeImage } = require('../services/vision/visionService');
         const result = await analyzeImage(finalBase64, finalMimeType);
         return res.json({ text: result.text });
-    } catch (err) {
+    } catch (err: any) {
         console.error('Error extracting image text:', err.message);
         res.status(500).json({ error: 'Failed to extract text from image' });
     }
 };
-
-
-
-module.exports = { uploadImage, extractImageText, uploadHtmlImages };

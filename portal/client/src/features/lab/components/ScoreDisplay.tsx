@@ -2,14 +2,39 @@ import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import ScoreOverride from './ScoreOverride';
 
-const ScoreDisplay = ({ sessionId, finalScore, gradedResults, questionId, isAdmin, maxPoints = 1, onScoreUpdated }) => {
+interface TestResults {
+    totalTests: number;
+    passed: number;
+    failed: number;
+    errors: number;
+    skipped: number;
+    details: string[];
+}
+
+interface GradedResult {
+    score: number;
+    feedback: string;
+    testResults?: TestResults;
+}
+
+interface ScoreDisplayProps {
+    sessionId: string;
+    finalScore: any;
+    gradedResults: Record<string, GradedResult>;
+    questionId: string;
+    isAdmin: boolean;
+    maxPoints?: number;
+    onScoreUpdated: (data: any) => void;
+}
+
+export const ScoreDisplay = ({ sessionId, finalScore, gradedResults, questionId, isAdmin, maxPoints = 1, onScoreUpdated }: ScoreDisplayProps) => {
     //no finalResults means no submissions. Do not show score and feedback
     if(!finalScore) return null;
 
     let result = gradedResults[questionId];
     if(!result){
         result = {
-            score:0,
+            score: 0,
             feedback: "no response"
         };
     }
@@ -36,8 +61,16 @@ const ScoreDisplay = ({ sessionId, finalScore, gradedResults, questionId, isAdmi
                 <span className="font-semibold">Feedback:</span>
                 <ReactMarkdown className="prose prose-sm max-w-none mt-1">{result?.feedback}</ReactMarkdown>
             </div>
+            {result?.testResults?.details?.length > 0 && (
+                <div className="mt-1">
+                    <span className="font-semibold">Test Errors:</span>
+                    <ul className="mt-1 font-mono text-xs text-red-700 space-y-0.5">
+                        {result.testResults.details.map((line, i) => (
+                            <li key={i}>{line}</li>
+                        ))}
+                    </ul>
+                </div>
+            )}
         </div>
     );
 }
-
-export default ScoreDisplay;

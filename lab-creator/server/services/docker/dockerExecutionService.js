@@ -65,6 +65,12 @@ function parseJUnitOutput(output) {
         results.passed = results.totalTests - results.failed - results.errors - results.skipped;
     }
 
+    // Parse [ERROR] lines for both exceptions and assertion failures:
+    // errors:   "[ERROR]   SolutionTest.testFoo:42 » ArrayIndexOutOfBounds ..."
+    // failures: "[ERROR]   SolutionTest.testFoo:42 expected:<5> but was:<3>"
+    const errorLines = output.match(/\[ERROR\]\s+SolutionTest\.\w+:\d+.+/g) || [];
+    results.details = errorLines.map(line => line.replace(/\[ERROR\]\s+/, '').trim());
+
     return results;
 }
 
