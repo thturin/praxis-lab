@@ -5,7 +5,7 @@ require('dotenv').config({ path: path.join(__dirname, '..', '..', '..', '.env') 
 const axios = require('axios');
 const { PrismaClient } = require('@prisma/client');
 const { Q1_Variants, Q2_Variants, Q3_Variants } = require('./variants');
-const { gradeWithFusion } = require('../services/grading/gradingService');
+const { gradeWithFusion } = require('../services/grading/textGradingService');
 const { computeFinalScore } = require('../services/scoring/scoringService');
 
 const labDbUrl = process.env.LABCREATOR_DATABASE_URL || process.env.DATABASE_URL;

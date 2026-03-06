@@ -48,7 +48,7 @@ npm run typecheck  # tsc --noEmit (type-check only, no output)
 
 Migration is incremental. Current status from `docs/typescript-conversion.md`:
 
-**Converted to `.ts`:** `gradeController.ts`, `gradeRoutes.ts`, `gradingService.ts`, `gradingPrompts.ts`, `scoringService.ts`, `llmClient.ts`
+**Converted to `.ts`:** `gradeController.ts`, `gradeRoutes.ts`, `textGradingService.ts`, `javaGradingService.ts`, `gradingPrompts.ts`, `scoringService.ts`, `llmClient.ts`
 
 **Still `.js`:** `app.js`, `labController.js`, `labRoutes.js`, `questionController.js`, docker services, utils, scripts, prisma seed
 

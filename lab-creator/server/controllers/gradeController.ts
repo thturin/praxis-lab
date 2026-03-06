@@ -1,6 +1,7 @@
 require('dotenv').config();
 const { PrismaClient } = require('@prisma/client');
-const { generateJUnitTests, gradeTextQuestion, gradeJavaQuestion: gradeJavaQuestionService } = require('../services/grading/gradingService');
+const { generateJUnitTests, gradeJavaQuestionService } = require('../services/grading/javaGradingService');
+const { gradeTextQuestion } = require('../services/grading/textGradingService');
 const { computeFinalScore } = require('../services/scoring/scoringService');
 const { parseCodeFromHtml, parseTextFromHtml } = require('../utils/parseHtml');
 const prisma = new PrismaClient();
@@ -174,8 +175,6 @@ export const regradeSession = async (req: Request, res: Response) => {
                 //Error grading question 1765678253268 during regrade getaddrinfo EAI_AGAIN api.deepseek.com
                 //add a small delay
                 await new Promise(resolve => setTimeout(resolve, 500)); //500 ms delay
-
-
 
             } catch (err: any) {
                 console.error(`Error grading question ${questionId} during regrade`, err.message);

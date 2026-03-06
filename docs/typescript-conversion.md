@@ -27,7 +27,8 @@
 - [ ] `routes/questionRoutes.js`
 - [x] `routes/gradeRoutes.ts`
 - [ ] `routes/fileRoutes.js`
-- [x] `services/grading/gradingService.ts`
+- [x] `services/grading/textGradingService.ts`
+- [x] `services/grading/javaGradingService.ts`
 - [x] `services/prompts/gradingPrompts.ts`
 - [ ] `services/prompts/systemPrompts.js`
 - [x] `services/scoring/scoringService.ts`
