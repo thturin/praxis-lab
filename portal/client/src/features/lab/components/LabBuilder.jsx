@@ -6,7 +6,7 @@ import AIPrompt from './AIPrompt';
 import "react-quill/dist/quill.snow.css";
 import "../styles/Lab.css";
 import axios from "axios";
-import { inlineImagesAsDataUrls } from "./fetchImages";
+import { inlineImagesAsDataUrls } from "../utils/imageUtils";
 
 
 function LabBuilder({ blocks, setBlocks, 

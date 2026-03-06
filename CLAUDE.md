@@ -124,6 +124,10 @@ docker build -t java-grading-sandbox:latest ./lab-creator/server/docker/java-san
 
 The Dockerfile runs a dummy test during build to pre-download Maven/Surefire/JUnit dependencies for offline execution. Rebuild whenever `pom.xml` dependencies change.
 
+## Plans & To-Do
+
+All planned work lives in `docs/plans/`. When starting a new plan, create a dedicated file there (e.g. `docs/plans/remove-aiprompt.md`). The running to-do list of pending items is at `docs/plans/todo.md` — add new items there whenever a feature or refactor is deferred.
+
 ## Problems & Solutions Log
 
 When a significant problem is encountered and resolved, add it to `docs/ideas/problems-and-solutions.md`. Include:
