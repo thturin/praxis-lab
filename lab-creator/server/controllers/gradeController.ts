@@ -20,6 +20,7 @@ export const calculateScore = async (req: Request, res: Response) => {
     // console.log('HERE ARE THE GRADED RESULTS ->>>>',gradedResults);
     const finalScore = computeFinalScore(gradedResults);
     console.log(finalScore);
+    console.log('--------------------------------');
 
     try {
         const updatedSession = await prisma.session.update({
