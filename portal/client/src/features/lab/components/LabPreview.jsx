@@ -3,7 +3,6 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { createSession } from '../models/session';
 import MaterialBlock from './MaterialBlock';
 import QuestionBlock from './QuestionBlock';
-import AIPrompt from './AIPrompt';
 import { generateDisplayNumbers } from '../utils/questionNumbers';
 import { extractAllImagesData } from '../utils/imageUtils';
 import "../styles/Lab.css";
@@ -222,7 +221,7 @@ function LabPreview({
             }
         }
 
-        // Extract text from any images in the user's answer to translate to text for grading
+        // Extract text from any images (base64 or URL) in the user's answer to translate to text for grading
         let studentImageText = '';
         const images = extractAllImagesData(userAnswer);
         //console.log('images',images);
@@ -467,9 +466,6 @@ function LabPreview({
                         </div>
                     </div>
                 ))}
-                {mode === 'admin' && !readOnly && (
-                    <AIPrompt value={aiPrompt} onChange={handleAiPromptChange} />
-                )}
 
                 {/* Export session for local testing */}
 

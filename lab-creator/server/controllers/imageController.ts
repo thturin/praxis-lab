@@ -2,7 +2,7 @@ import path from 'path';
 import fs from 'fs';
 import { Request, Response } from 'express';
 import { saveImageFile, extractAndSaveImages } from '../services/images/imageService';
-import { analyzeImage } from '../services/vision/visionService';
+import { extractImage } from '../services/vision/visionService';
 
 
 //==========FOR HTML STRING IMAGE UPLOAD (STUDENT RESPONSES)===========
@@ -65,7 +65,7 @@ export const extractImageText = async (req: Request, res: Response) => {
             return res.status(400).json({ error: 'Either base64Data+mimeType or imageUrl is required' });
         }
 
-        const result = await analyzeImage(finalBase64, finalMimeType);
+        const result = await extractImage(finalBase64, finalMimeType);
         return res.json({ text: result.text });
     } catch (err: any) {
         console.error('Error extracting image text:', err.message);

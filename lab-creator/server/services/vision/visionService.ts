@@ -8,7 +8,7 @@ interface VisionResult {
  * Analyze an image using a vision LLM via OpenRouter.
  * Extracts text from handwritten work, circuit diagrams, screenshots, etc.
  */
-export async function analyzeImage(base64Data: string, mimeType: string): Promise<VisionResult> {
+export async function extractImage(base64Data: string, mimeType: string): Promise<VisionResult> {
   const apiKey = process.env.OPEN_ROUTER_API_KEY;
   if (!apiKey) throw new Error('OPEN_ROUTER_API_KEY is not configured');
 

@@ -332,7 +332,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                             <LabBuilder
                                 blocks={blocks}
                                 setBlocks={setBlocks}
-                                title={title}
+                                title={selectedAssignmentObj?.title}
                                 setTitle={setTitle}
                                 assignmentId={selectedAssignmentId}
                                 handleAiPromptChange={handleAiPromptChange}

@@ -2,7 +2,6 @@ import { useEffect, useCallback } from "react";
 import { createQuestion, createMaterial } from "../models/block";
 import QuestionEditor from "./QuestionEditor";
 import MaterialEditor from "./MaterialEditor";
-import AIPrompt from './AIPrompt';
 import "react-quill/dist/quill.snow.css";
 import "../styles/Lab.css";
 import axios from "axios";
@@ -195,8 +194,6 @@ function LabBuilder({ blocks, setBlocks,
                     </div>
                 </div>
             ))}
-
-            <AIPrompt value={aiPrompt} onChange={handleAiPromptChange} />
 
             {/* BUTTONS */}
             <button

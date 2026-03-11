@@ -320,7 +320,7 @@ export const gradeWithFusion = async ({ userAnswer, answerKey, question, questio
           { role: 'user', content: feedbackPrompt },
         ],
         temperature: 0.3,
-        maxTokens: 400,
+        maxTokens: 1000,
         tools: [{ type: 'function', function: {
           name: 'provide_feedback',
           description: 'Provide encouraging feedback for the student',
