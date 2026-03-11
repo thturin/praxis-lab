@@ -60,9 +60,9 @@ export const generateTestsForJavaQuestion = async (req: Request, res: Response) 
 //gradecontroller is responsible for parsing HTML and appending image text 
 // before sending to gradingService, which is responsible for the actual grading logic (LLM calls, similarity calculations, etc)
 export const gradeQuestion = async (req: Request, res: Response) => {
-    const { userAnswer, answerKey, question, questionType, adminImageText, adminKeyImageText, studentImageText } = req.body;
+    const { userAnswer, answerKey, question, questionType, adminImageText, adminKeyImageText, studentImageTexts } = req.body;
     try {
-        const result = await gradeTextQuestion({ userAnswer, answerKey, question, questionType, studentImageText, adminImageText, adminKeyImageText });
+        const result = await gradeTextQuestion({ userAnswer, answerKey, question, questionType, studentImageTexts, adminImageText, adminKeyImageText });
         return res.json(result);
     } catch (err: any) {
         console.error('Grading failed:', err.message);

@@ -221,29 +221,26 @@ function LabPreview({
             }
         }
 
-        // Extract text from any images (base64 or URL) in the user's answer to translate to text for grading
-        let studentImageText = '';
+        // Extract text from any images in the user's answer — passed as ordered array for inline replacement on backend
+        let studentImageTexts = [];
         const images = extractAllImagesData(userAnswer);
-        //console.log('images',images);
-            // {base64Data: null, mimeType: null, imageUrl: '/images/sessions/cf6a5b9d5162ce0c73d7d1e80c8e3862.png'}
 
         if (images.length > 0) {
-            const extractedTexts = await Promise.all(
-                images.map(async (imgData, i) => {
+            studentImageTexts = await Promise.all(
+                images.map(async (imgData) => {
                     try {
                         const res = await axios.post(`${process.env.REACT_APP_API_LAB_HOST}/image/extract-text`, imgData);
-                        return `[Screenshot ${i + 1}]: ${res.data.text}`;
+                        return res.data.text || 'No text present in image';
                     } catch (err) {
                         console.error('Failed to extract text from student image', err);
-                        return null;
+                        return '';
                     }
                 })
             );
-            studentImageText = extractedTexts.filter(Boolean).join('\n');
-            if (studentImageText) {
+            if (studentImageTexts.some(Boolean)) {
                 setSession(prev => ({
                     ...prev,
-                    studentImageTexts: { ...(prev.studentImageTexts || {}), [questionId]: studentImageText }
+                    studentImageTexts: { ...(prev.studentImageTexts || {}), [questionId]: studentImageTexts.join('\n') }
                 }));
             }
         }
@@ -262,7 +259,7 @@ function LabPreview({
                 testResults: response.data.testResults,
                 generatedTests: response.data.generatedTests
             };
-        } else {
+        } else { //NON CODING QUESTION
             const response = await axios.post(`${process.env.REACT_APP_API_LAB_HOST}/grade/question`, {
                 userAnswer,
                 answerKey,
@@ -271,7 +268,7 @@ function LabPreview({
                 AIPrompt: aiPrompt,
                 adminImageText,
                 adminKeyImageText,
-                studentImageText
+                studentImageTexts
             });
             return { score: response.data.score, feedback: response.data.feedback };
         }

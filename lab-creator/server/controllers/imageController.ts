@@ -45,6 +45,7 @@ export const extractImageText = async (req: Request, res: Response) => {
         let finalBase64: string = base64Data;
         let finalMimeType: string = mimeType;
 
+        //if base64Data and mimeType are not provided, try to read the image file from the provided imageUrl (this is for grading previously uploaded images that are only stored as URLs in the student's answer HTML)
         if (!finalBase64 && imageUrl) {
             const filename = imageUrl.replace('/images/', '');
             const filePath = path.join(__dirname, '..', 'uploads', filename);
@@ -64,7 +65,7 @@ export const extractImageText = async (req: Request, res: Response) => {
         if (!finalBase64 || !finalMimeType) {
             return res.status(400).json({ error: 'Either base64Data+mimeType or imageUrl is required' });
         }
-
+        //send the base64 image data to the vision service to extract text
         const result = await extractImage(finalBase64, finalMimeType);
         return res.json({ text: result.text });
     } catch (err: any) {

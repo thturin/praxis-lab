@@ -47,7 +47,7 @@ export interface GradeTextQuestionParams {
   answerKey: string;
   question: string;
   questionType: string;
-  studentImageText?: string;
+  studentImageTexts?: string[];
   adminImageText?: string;
   adminKeyImageText?: string;
 }
@@ -198,10 +198,10 @@ export const matchPseudoQuestion = async (question: string, userAnswer: string):
 //=============LLM-BASED GENERAL EVALUATION (LGE)=============
 export const evaluateWithLLM = async ({ userAnswer, answerKey, question, questionType, AIPrompt, timeoutMs = 20000 }: GradeParams): Promise<LGEResult> => {
   try {
-    console.log('===================question for LGE:\n', question);
-    console.log('\n===================end of question for LGE\n');
-    console.log('===============user answer for LGE:\n', userAnswer);
-    console.log('===================end of answer for LGE\n');
+    console.log('===================question for LGE===========================:\n', question);
+    console.log('\n===================end of question for LGE===========================\n');
+    console.log('===============user answer for LGE:===========================\n', userAnswer);
+    console.log('===================end of answer for LGE===========================\n');
     const prompt = buildLGEPrompt({ userAnswer, answerKey, question, questionType, AIPrompt });
     const raw = await callLLM({
       provider: 'deepseek',
@@ -232,7 +232,7 @@ export const evaluateWithLLM = async ({ userAnswer, answerKey, question, questio
       console.error('LGE JSON parse failed (response likely truncated). Raw:', raw);
       return { success: false, error: 'LGE response was truncated — increase maxTokens or shorten feedback' };
     }
-    console.log('*****************LGE parsed response:', parsed);
+    console.log('*****************LGE parsed response:*****************************', parsed);
     return { success: true, ...parsed };
   } catch (err: any) {
     const status = err.response?.status;
@@ -346,16 +346,31 @@ export const gradeWithFusion = async ({ userAnswer, answerKey, question, questio
 // Shared grading logic for a single text question.
 // Used by both gradeQuestion (per-request) and regradeSession (batch).
 export const gradeTextQuestion = async (params: GradeTextQuestionParams): Promise<GradeTextQuestionResult> => {
-  const { userAnswer, answerKey, question, questionType, studentImageText, adminImageText, adminKeyImageText } = params;
+  const { userAnswer, answerKey, question, questionType, studentImageTexts, adminImageText, adminKeyImageText } = params;
 
-  const parsedUserAnswer = parseTextFromHtml(userAnswer);
-  const effectiveUserAnswer = [parsedUserAnswer, studentImageText].filter(Boolean).join('\n\n');
+  // Replace each <img> tag inline with its extracted text (ordered array matches image order in HTML)
+  let imgIndex = 0;
+  const htmlWithInlineImages = (userAnswer || '').replace(/<img[^>]*>/gi, () => {
+    const text = studentImageTexts?.[imgIndex];
+    imgIndex++;
+    return text ? `[Screenshot ${imgIndex}: ${text}]` : '';
+  });
+
+  //remove html from the rest of the answer
+  const effectiveUserAnswer = parseTextFromHtml(htmlWithInlineImages);
 
   if (!effectiveUserAnswer.trim()) return { score: 0, feedback: 'No response submitted', skipped: true };
-  if (!answerKey?.trim()) return { score: 1, feedback: 'Answer key missing; awarding full credit', skipped: true };
 
+  if (!parseTextFromHtml(answerKey)?.trim()) return { score: 1, feedback: 'Answer key missing; awarding full credit', skipped: true };
+
+
+  //CURRENTLY IMAGE TEXTS ARE NOT INLINE FOR QUESTION AND ANSWER KEY, BUT APPENDED AT THE END 
+  // /- THIS IS TO ENSURE THEY GET INCLUDED IN THE LLM EVALUATION (since the LLM won't be able to associate them with specific <img> tags in the HTML)
+ 
+  //remove html from the question and answer key, and append any admin-provided image text to the end (so it gets included in the LLM evaluation)
   let parsedQuestion = parseTextFromHtml(question);
   if (adminImageText?.trim()) parsedQuestion += `\n\n[Image text]: ${adminImageText.trim()}`;
+
 
   let parsedAnswerKey = parseTextFromHtml(answerKey);
   if (adminKeyImageText?.trim()) parsedAnswerKey += `\n\n[Image text]: ${adminKeyImageText.trim()}`;
