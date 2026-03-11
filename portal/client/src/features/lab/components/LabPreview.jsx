@@ -240,7 +240,7 @@ function LabPreview({
             if (studentImageTexts.some(Boolean)) {
                 setSession(prev => ({
                     ...prev,
-                    studentImageTexts: { ...(prev.studentImageTexts || {}), [questionId]: studentImageTexts.join('\n') }
+                    studentImageTexts: { ...(prev.studentImageTexts || {}), [questionId]: studentImageTexts }
                 }));
             }
         }

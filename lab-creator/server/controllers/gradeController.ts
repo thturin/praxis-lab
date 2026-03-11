@@ -108,7 +108,7 @@ export const regradeSession = async (req: Request, res: Response) => {
             prisma.session.findUnique({ where: { labId_userId: { labId, userId } } })
         ]);
         if (!lab) return res.status(404).json({ error: `Lab ${labId} not found` });
-        const studentImageTexts: Record<string, string> = (session?.studentImageTexts as any) || {};
+        const studentImageTexts: Record<string, string[]> = (session?.studentImageTexts as any) || {};
 
         const blocks: any[] = Array.isArray(lab.blocks) ? lab.blocks : [];
         const questionLookup: Record<string, any> = {};
@@ -161,7 +161,7 @@ export const regradeSession = async (req: Request, res: Response) => {
                         answerKey: details.key,
                         question: details.prompt,
                         questionType: details.type,
-                        studentImageText: studentImageTexts[questionId],
+                        studentImageTexts: studentImageTexts[questionId],
                         adminImageText: details.imageText,
                         adminKeyImageText: details.keyImageText,
                     });
