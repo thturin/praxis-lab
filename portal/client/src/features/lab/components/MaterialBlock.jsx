@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { resolveImageSrcs } from './fetchImages';
 
 const MaterialBlock = ({ content }) => {
-    const [isExpanded, setIsExpanded] = useState(true);
+    const [isExpanded, setIsExpanded] = useState(false);
 
     return (
         <div className="mt-2 border border-purple-200 bg-purple-50 rounded-md overflow-hidden shadow-sm">

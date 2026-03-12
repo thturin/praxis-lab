@@ -6,6 +6,7 @@ import "react-quill/dist/quill.snow.css";
 import "../styles/Lab.css";
 import axios from "axios";
 import { inlineImagesAsDataUrls } from "../utils/imageUtils";
+import { generateDisplayNumbers } from "../utils/questionNumbers";
 
 
 function LabBuilder({ blocks, setBlocks, 
@@ -144,6 +145,8 @@ function LabBuilder({ blocks, setBlocks,
         URL.revokeObjectURL(url);
     }
 
+    const displayNumbers = generateDisplayNumbers(blocks);
+
     return (
         <div className="max-w-7xl mx-auto p-10">
             <h1 className="text-2xl font-bold mb-4" style={{ whiteSpace: "pre-line" }}>
@@ -186,6 +189,7 @@ function LabBuilder({ blocks, setBlocks,
                             <QuestionEditor
                                 key={block.id}
                                 q={block}
+                                displayNumbers={displayNumbers}
                                 onQuestionChange={(updatedBlock) => updateBlock(block.id, updatedBlock)}
                                 onQuestionDelete={() => deleteBlock(block.id)}
                                 level={0}

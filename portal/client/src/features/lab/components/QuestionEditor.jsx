@@ -7,7 +7,7 @@ import ImageTextBox from './ImageTextBox';
 import axios from 'axios';
 
 
-function QuestionEditor({ q, onQuestionChange, onQuestionDelete, level = 0 }) {
+function QuestionEditor({ q, onQuestionChange, onQuestionDelete, level = 0, displayNumbers = {} }) {
     const [showAnswerKey, setShowAnswerKey] = useState(false);
     const [showExplanation, setShowExplanation] = useState(false);
     const [showJavaGenerateTestCodeExpansion, setShowJavaGenerateTestCodeExpansion] = useState(false);
@@ -42,7 +42,9 @@ function QuestionEditor({ q, onQuestionChange, onQuestionDelete, level = 0 }) {
             >
                 <div className="flex items-center gap-2">
                     <span className="font-semibold text-sm text-orange-800">
-                        {level === 0 ? '❓ Question Block' : '❓ Sub Question'}
+                        {level === 0
+                            ? `❓ Question ${displayNumbers[q.id] ?? ''}`
+                            : `❓ Sub Question ${displayNumbers[q.id] ?? ''}`}
                     </span>
                 </div>
                 <span className="text-orange-600 text-xs">
@@ -195,6 +197,7 @@ function QuestionEditor({ q, onQuestionChange, onQuestionDelete, level = 0 }) {
                                     key={sq.id}
                                     q={sq}
                                     level={level + 1}
+                                    displayNumbers={displayNumbers}
                                     onQuestionChange={
                                         //pass the updated Sub Q from child to parent in
                                         //updatedSubQ

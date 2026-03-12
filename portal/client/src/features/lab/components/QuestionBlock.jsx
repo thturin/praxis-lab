@@ -108,7 +108,7 @@ const SubQuestionEditor = ({ question, displayNumber, responses, setResponses, g
 };
 
 const QuestionBlock = ({ block, displayNumber, displayNumbers, setResponses, responses, gradedResults, finalScore, showExplanations, isAdmin, sessionId, onScoreUpdated, onGradeSingle, gradingQuestionIds, gradingErrors }) => {
-    const [isExpanded, setIsExpanded] = useState(true);
+    const [isExpanded, setIsExpanded] = useState(false);
 
     return (
         <div className="mt-2 border border-orange-200 bg-orange-50 rounded-md overflow-hidden shadow-sm">
