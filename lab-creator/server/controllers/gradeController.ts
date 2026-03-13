@@ -2,6 +2,8 @@ require('dotenv').config();
 const { PrismaClient } = require('@prisma/client');
 const { generateJUnitTests, gradeJavaQuestionService } = require('../services/grading/javaGradingService');
 const { gradeTextQuestion } = require('../services/grading/textGradingService');
+const { gradeMultipleChoiceQuestion } = require('../services/grading/multipleChoiceGradingService');
+const { gradeBasicQuestion } = require('../services/grading/basicGradingService');
 const { computeFinalScore } = require('../services/scoring/scoringService');
 const { parseCodeFromHtml, parseTextFromHtml } = require('../utils/parseHtml');
 const prisma = new PrismaClient();
@@ -60,9 +62,16 @@ export const generateTestsForJavaQuestion = async (req: Request, res: Response) 
 //gradecontroller is responsible for parsing HTML and appending image text 
 // before sending to gradingService, which is responsible for the actual grading logic (LLM calls, similarity calculations, etc)
 export const gradeQuestion = async (req: Request, res: Response) => {
-    const { userAnswer, answerKey, question, questionType, adminImageText, adminKeyImageText, studentImageTexts } = req.body;
+    const { userAnswer, answerKey, question, questionType, adminImageText, adminKeyImageText, studentImageTexts, AIPrompt } = req.body;
     try {
-        const result = await gradeTextQuestion({ userAnswer, answerKey, question, questionType, studentImageTexts, adminImageText, adminKeyImageText });
+        let result;
+        if (questionType === 'multiple-choice') {
+            result = await gradeMultipleChoiceQuestion({ userAnswer, answerKey, question, adminImageText, studentImageTexts });
+        } else if (questionType === 'basic') {
+            result = await gradeBasicQuestion({ userAnswer, aiPrompt: AIPrompt, question, adminImageText, studentImageTexts });
+        } else {
+            result = await gradeTextQuestion({ userAnswer, answerKey, question, questionType, studentImageTexts, adminImageText, adminKeyImageText });
+        }
         return res.json(result);
     } catch (err: any) {
         console.error('Grading failed:', err.message);
@@ -155,6 +164,18 @@ export const regradeSession = async (req: Request, res: Response) => {
                         testResults: result.testResults
                     };
 
+                } else if (details.type === 'multiple-choice') {
+                    result = await gradeMultipleChoiceQuestion({
+                        userAnswer,
+                        answerKey: details.key,
+                        question: details.prompt,
+                    });
+                } else if (details.type === 'basic') {
+                    result = await gradeBasicQuestion({
+                        userAnswer,
+                        aiPrompt: details.aiPrompt,
+                        question: details.prompt,
+                    });
                 } else {
                     result = await gradeTextQuestion({
                         userAnswer,

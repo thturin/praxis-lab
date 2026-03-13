@@ -1,6 +1,7 @@
 const { callLLM, callEmbeddingModel } = require('../llm/llmClient');
 const { buildLGEPrompt, buildCosineFeedbackPrompt, buildKeyPointsExtractionPrompt, buildPseudoQuestionPrompt } = require('../prompts/gradingPrompts');
 const { parseTextFromHtml } = require('../../utils/parseHtml');
+import { prepareGradingInputs } from '../../utils/prepareGradingInputs';
 
 
 interface GradeParams {
@@ -348,33 +349,11 @@ export const gradeWithFusion = async ({ userAnswer, answerKey, question, questio
 export const gradeTextQuestion = async (params: GradeTextQuestionParams): Promise<GradeTextQuestionResult> => {
   const { userAnswer, answerKey, question, questionType, studentImageTexts, adminImageText, adminKeyImageText } = params;
 
-  // Replace each <img> tag inline with its extracted text (ordered array matches image order in HTML)
-  let imgIndex = 0;
-  const htmlWithInlineImages = (userAnswer || '').replace(/<img[^>]*>/gi, () => {
-    const text = studentImageTexts?.[imgIndex];
-    imgIndex++;
-    return text ? `[Screenshot ${imgIndex}: ${text}]` : '';
-  });
+  const { effectiveAnswer, effectiveQuestion, effectiveAnswerKey } = prepareGradingInputs({ userAnswer, question, studentImageTexts, adminImageText, answerKey, adminKeyImageText });
 
-  //remove html from the rest of the answer
-  const effectiveUserAnswer = parseTextFromHtml(htmlWithInlineImages);
+  if (!effectiveAnswer.trim()) return { score: 0, feedback: 'No response submitted', skipped: true };
+  if (!effectiveAnswerKey?.trim()) return { score: 1, feedback: 'Answer key missing; awarding full credit', skipped: true };
 
-  if (!effectiveUserAnswer.trim()) return { score: 0, feedback: 'No response submitted', skipped: true };
-
-  if (!parseTextFromHtml(answerKey)?.trim()) return { score: 1, feedback: 'Answer key missing; awarding full credit', skipped: true };
-
-
-  //CURRENTLY IMAGE TEXTS ARE NOT INLINE FOR QUESTION AND ANSWER KEY, BUT APPENDED AT THE END 
-  // /- THIS IS TO ENSURE THEY GET INCLUDED IN THE LLM EVALUATION (since the LLM won't be able to associate them with specific <img> tags in the HTML)
- 
-  //remove html from the question and answer key, and append any admin-provided image text to the end (so it gets included in the LLM evaluation)
-  let parsedQuestion = parseTextFromHtml(question);
-  if (adminImageText?.trim()) parsedQuestion += `\n\n[Image text]: ${adminImageText.trim()}`;
-
-
-  let parsedAnswerKey = parseTextFromHtml(answerKey);
-  if (adminKeyImageText?.trim()) parsedAnswerKey += `\n\n[Image text]: ${adminKeyImageText.trim()}`;
-
-  const result = await gradeWithFusion({ userAnswer: effectiveUserAnswer, answerKey: parsedAnswerKey, question: parsedQuestion, questionType, AIPrompt: '' });
+  const result = await gradeWithFusion({ userAnswer: effectiveAnswer, answerKey: effectiveAnswerKey, question: effectiveQuestion, questionType, AIPrompt: '' });
   return { score: result.score, feedback: result.feedback };
 };

@@ -139,6 +139,22 @@ function QuestionEditor({ q, onQuestionChange, onQuestionDelete, level = 0, disp
                                     )}
                                 </div>
 
+                                {/* Grading Directions - Only for basic */}
+                                {q.type === 'basic' && (
+                                    <div className="mb-2 border border-yellow-200 bg-yellow-50 rounded-md overflow-hidden">
+                                        <div className="px-3 py-2">
+                                            <span className="font-semibold text-sm text-yellow-800 block mb-1">Grading Directions</span>
+                                            <textarea
+                                                placeholder="e.g. If the student's response contains X, pass. If not, fail."
+                                                className="w-full border p-1 text-sm rounded"
+                                                rows={3}
+                                                value={q.aiPrompt || ''}
+                                                onChange={(e) => update('aiPrompt', e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* Java Test Code Generator - Only show for code type questions */}
                                 {showJavaGenerateTestCode && (
                                     <div className="mb-2 border border-purple-200 bg-purple-50 rounded-md overflow-hidden">
@@ -229,6 +245,8 @@ function QuestionEditor({ q, onQuestionChange, onQuestionDelete, level = 0, disp
                         <option value="short">Short Answer</option>
                         <option value="textarea">Paragraph</option>
                         <option value="code">Java</option>
+                        <option value="multiple-choice">Multiple Choice</option>
+                        <option value="basic">Basic</option>
                     </select>
                     {/* ADD SUB QUESTION BUTTON */}
 

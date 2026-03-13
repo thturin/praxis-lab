@@ -168,6 +168,7 @@ function LabPreview({
         let generatedTestCode = '';
         let adminImageText = '';
         let adminKeyImageText = '';
+        let blockAiPrompt = '';
 
         for (const block of blocks) {
             //for questions without subquestions
@@ -180,6 +181,7 @@ function LabPreview({
                 generatedTestCode = block.generatedTestCode || '';
                 adminImageText = block.imageText || '';
                 adminKeyImageText = block.keyImageText || '';
+                blockAiPrompt = block.aiPrompt || '';
                 break;
             }
             //for questions with subquestions
@@ -193,6 +195,7 @@ function LabPreview({
                         generatedTestCode = sq.generatedTestCode || '';
                         adminImageText = sq.imageText || block.imageText || '';
                         adminKeyImageText = sq.keyImageText || '';
+                        blockAiPrompt = sq.aiPrompt || '';
                         break;
                     }
                 }
@@ -201,7 +204,8 @@ function LabPreview({
 
         if (!question || !type) return null;
 
-        if (!answerKey) { //no answer they then automatic score of 1 and feedback of no answer key provided. This is for non-graded questions where we still want to provide feedback and a score of 1 for completion.
+        // basic questions use aiPrompt as grading criteria, not answerKey — skip this check for them
+        if (!answerKey && type !== 'basic' && type !== 'multiple-choice') {
             return { score: 1, feedback: 'Auto-awarded: no answer key provided' };
         }
 
@@ -265,7 +269,7 @@ function LabPreview({
                 answerKey,
                 question,
                 questionType: type,
-                AIPrompt: aiPrompt,
+                AIPrompt: blockAiPrompt,
                 adminImageText,
                 adminKeyImageText,
                 studentImageTexts
