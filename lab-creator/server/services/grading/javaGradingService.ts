@@ -118,6 +118,13 @@ export const gradeJavaCode = async ({ studentCode, problemDescription, testCode 
     executionResult = await compileAndRunJavaWithTests({ studentCode, testCode, timeout: 60000 });
   } catch (err: any) {
     console.error('Docker execution failed', err.message);
+    if (err.message === 'Timeout') {
+      return {
+        gradingResults: { score: 0, feedback: 'Your code timed out during execution. This is often caused by an infinite loop. Check your loop conditions and make sure they will eventually terminate.' },
+        testResults: null,
+        generatedTests: testCode
+      };
+    }
     throw new Error('Failed to compile or run your code. Check for syntax errors.');
   }
 
