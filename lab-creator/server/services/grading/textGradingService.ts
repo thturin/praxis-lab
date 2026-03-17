@@ -17,7 +17,6 @@ interface GradingResult {
   score: number;
   result: string;
   feedback: string;
-  breakdown: { answerQuality: string; textSimilarity?: number; keyPointsSimilarity?: number; pseudoQuestionSimilarity?: number } | null;
 }
 
 interface CosineSimilarityVerification {
@@ -38,7 +37,7 @@ interface PseudoQuestionMatchResult {
 
 interface LGEResult {
   success: boolean;
-  answerQuality?: string;
+  score?: number; // 1 = pass, 0 = fail
   feedback?: string;
   error?: string;
 }
@@ -214,11 +213,11 @@ export const evaluateWithLLM = async ({ userAnswer, answerKey, question, questio
       maxTokens: 1000,
       tools: [{ type: 'function', function: {
         name: 'grade_response',
-        description: 'Grade the student response with pass/fail and feedback',
+        description: 'Grade the student response with 1 (pass) or 0 (fail) and feedback',
         parameters: {
           type: 'object',
           properties: {
-            answerQuality: { type: 'string', enum: ['pass', 'fail'] },
+            score: { type: 'integer', enum: [1, 0] },
             feedback: { type: 'string', description: 'Feedback for the student written in markdown. Use bullet points or numbered lists to separate distinct points.' }
           },
           required: ['answerQuality', 'feedback']
@@ -269,6 +268,7 @@ const FUSION_PASS_THRESHOLD = 0.5;
 
 export const gradeWithFusion = async ({ userAnswer, answerKey, question, questionType, AIPrompt, timeoutMs = 20000 }: GradeParams): Promise<GradingResult> => {
 
+  // Run all grading components in parallel
   const [lgeResult, kpmResult, pqmResult, tsmResult] = await Promise.all([
     evaluateWithLLM({ userAnswer, answerKey, question, questionType, AIPrompt, timeoutMs }),
     matchKeyPoints(question, userAnswer, answerKey),
@@ -280,7 +280,7 @@ export const gradeWithFusion = async ({ userAnswer, answerKey, question, questio
     throw new Error(`LGE model failed — ${lgeResult.error || 'unknown error'}`);
   }
 
-  const lgeScore = lgeResult.answerQuality === 'pass' ? 1 : 0;
+  const lgeScore = lgeResult.score ?? 0;
   let feedback = lgeResult.feedback || '';
 
   const fusedScore = (
@@ -290,16 +290,7 @@ export const gradeWithFusion = async ({ userAnswer, answerKey, question, questio
     FUSION_WEIGHTS.pqm * pqmResult.similarity
   );
 
-  const answerQuality = fusedScore >= FUSION_PASS_THRESHOLD ? 'PASS' : 'FAIL';
-  const score = answerQuality === 'PASS' ? 1 : 0;
-  const result = answerQuality;
-
-  const breakdown = {
-    answerQuality,
-    textSimilarity: tsmResult.similarity,
-    keyPointsSimilarity: kpmResult.similarity,
-    pseudoQuestionSimilarity: pqmResult.similarity,
-  };
+  const score = fusedScore >= FUSION_PASS_THRESHOLD ? 1 : 0;
 
   console.log('Grading fusion:', {
     lge: lgeScore,
@@ -307,12 +298,17 @@ export const gradeWithFusion = async ({ userAnswer, answerKey, question, questio
     kpm: kpmResult.similarity.toFixed(3),
     pqm: pqmResult.similarity.toFixed(3),
     fusedScore: fusedScore.toFixed(3),
-    result,
+    score: score ? 'PASS' : 'FAIL',
   });
 
-  if (lgeScore === 0 && answerQuality === 'PASS') {
+  if (lgeScore === 0 && score === 1) { //initial LGE fails but fusion passes — generate feedback explaining the pass
     try {
-      const feedbackPrompt = buildCosineFeedbackPrompt({
+
+      //create a new call with a prompt for feedback generation based on the PASSED cosine similarity result,
+      // // which is the strongest signal of semantic correctness — t
+      // //his provides more specific and personalized feedback to the student on why their 
+      // //answer is considered correct, even if it was expressed differently than the reference answer
+      const feedbackPrompt = buildCosineFeedbackPrompt({ 
         userAnswer, answerKey, question, similarity: fusedScore
       });
       const raw = await callLLM({
@@ -341,7 +337,7 @@ export const gradeWithFusion = async ({ userAnswer, answerKey, question, questio
     }
   }
 
-  return { score, result, feedback, breakdown };
+  return { score, result: score ? 'PASS' : 'FAIL', feedback };
 };
 
 // Shared grading logic for a single text question.
