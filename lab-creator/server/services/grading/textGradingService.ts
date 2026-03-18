@@ -1,5 +1,6 @@
 const { callLLM } = require('../llm/llmClient');
-const { buildLGEPrompt, buildCosineFeedbackPrompt, buildKeyPointsExtractionPrompt, buildPseudoQuestionPrompt } = require('../prompts/gradingPrompts');
+const { buildLGEPrompt, buildKeyPointsExtractionPrompt, buildPseudoQuestionPrompt } = require('../prompts/gradingPrompts');
+import { generateFusionFeedback } from './feedbackService';
 import { prepareGradingInputs } from '../../utils/prepareGradingInputs';
 import { calculateEmbeddingSimilarity, verifyWithCosineSimilarity } from './embeddingService';
 
@@ -255,39 +256,7 @@ export const gradeWithFusion = async ({ userAnswer, answerKey, question, questio
   });
 
   if (lgeScore === 0 && score === 1) { //initial LGE fails but fusion passes — generate feedback explaining the pass
-    try {
-
-      //create a new call with a prompt for feedback generation based on the PASSED cosine similarity result,
-      // // which is the strongest signal of semantic correctness — t
-      // //his provides more specific and personalized feedback to the student on why their 
-      // //answer is considered correct, even if it was expressed differently than the reference answer
-      const feedbackPrompt = buildCosineFeedbackPrompt({ 
-        userAnswer, answerKey, question, similarity: fusedScore
-      });
-      const raw = await callLLM({
-        messages: [
-          { role: 'system', content: 'You are an empathetic grading assistant.' },
-          { role: 'user', content: feedbackPrompt },
-        ],
-        temperature: 0.3,
-        maxTokens: 1000,
-        tools: [{ type: 'function', function: {
-          name: 'provide_feedback',
-          description: 'Provide encouraging feedback for the student',
-          parameters: {
-            type: 'object',
-            properties: { feedback: { type: 'string', description: 'Feedback for the student written in markdown. Use bullet points or numbered lists to separate distinct points.' } },
-            required: ['feedback']
-          }
-        }}],
-        timeout: timeoutMs,
-      });
-      const feedbackResponse = JSON.parse(raw);
-      feedback = feedbackResponse.feedback || 'Your answer demonstrates correct understanding of the key concepts.';
-    } catch (err) {
-      console.error('Error generating fusion override feedback:', err.response?.data || err.message);
-      feedback = 'Your answer demonstrates correct understanding of the key concepts, though expressed differently than the expected response.';
-    }
+    feedback = await generateFusionFeedback({ userAnswer, answerKey, question, fusedScore, timeoutMs });
   }
 
   return { score, result: score ? 'PASS' : 'FAIL', feedback };

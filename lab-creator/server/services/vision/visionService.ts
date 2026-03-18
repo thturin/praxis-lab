@@ -27,7 +27,6 @@ export interface ImageAnalysis {
   analytical_summary: {
     primary_function: string;
     identified_pattern: string;
-    noted_anomalies_or_constraints: string[];
   };
 }
 
@@ -167,13 +166,8 @@ export async function analyzeImage(base64Data: string, mimeType: string): Promis
                   properties: {
                     primary_function: { type: 'string', description: 'What this diagram/image does overall' },
                     identified_pattern: { type: 'string', description: 'Design pattern or structure recognized' },
-                    noted_anomalies_or_constraints: {
-                      type: 'array',
-                      items: { type: 'string' },
-                      description: 'Any anomalies, edge cases, or constraints observed'
-                    }
                   },
-                  required: ['primary_function', 'identified_pattern', 'noted_anomalies_or_constraints']
+                  required: ['primary_function', 'identified_pattern']
                 }
               },
               required: ['text_extraction', 'visual_components', 'logical_flow', 'analytical_summary']
@@ -232,11 +226,7 @@ export async function analyzeImage(base64Data: string, mimeType: string): Promis
 //       ]                                                                                                                                                       
 //     },            
 //     "analytical_summary": {
-//       "primary_function": "4-bit serial-in parallel-out shift register",                                                                                      
-//       "identified_pattern": "Linear feedback shift register with AND gate output enable",                                                                     
-//       "noted_anomalies_or_constraints": [                                                                                                                     
-//         "Pull-up resistor on reset line defaults logic HIGH",                                                                                                 
-//         "AND gate enables output only when all flip-flops are set"                                                                                            
-//       ]                                                                                                                                                       
+//       "primary_function": "4-bit serial-in parallel-out shift register",
+//       "identified_pattern": "Linear feedback shift register with AND gate output enable"
 //     }             
 //   }                            

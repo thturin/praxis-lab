@@ -7,6 +7,10 @@ interface CosineSimilarityVerification {
 
 //=============EMBEDDING MODEL (TSM)=============
 export const calculateEmbeddingSimilarity = async (text1: string, text2: string): Promise<number> => {
+  const empty1 = !text1?.trim();
+  const empty2 = !text2?.trim();
+  if (empty1 && empty2) return 1.0; // both agree there's nothing
+  if (empty1 || empty2) return 0;   // one side missing — treat as mismatch
   try {
     const embedding = await callEmbeddingModel({ input: [text1, text2] });
     let dotProduct = 0;
