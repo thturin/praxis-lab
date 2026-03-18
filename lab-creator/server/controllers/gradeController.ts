@@ -2,6 +2,7 @@ require('dotenv').config();
 const { PrismaClient } = require('@prisma/client');
 const { generateJUnitTests, gradeJavaQuestionService } = require('../services/grading/javaGradingService');
 const { gradeTextQuestion } = require('../services/grading/textGradingService');
+const { gradeImageAnalysisWithFusion } = require('../services/grading/imageGradingService');
 const { gradeMultipleChoiceQuestion } = require('../services/grading/multipleChoiceGradingService');
 const { gradeBasicQuestion } = require('../services/grading/basicGradingService');
 const { computeFinalScore } = require('../services/scoring/scoringService');
@@ -62,15 +63,24 @@ export const generateTestsForJavaQuestion = async (req: Request, res: Response) 
 //gradecontroller is responsible for parsing HTML and appending image text 
 // before sending to gradingService, which is responsible for the actual grading logic (LLM calls, similarity calculations, etc)
 export const gradeQuestion = async (req: Request, res: Response) => {
-    const { userAnswer, answerKey, question, questionType, adminImageText, adminKeyImageText, studentImageTexts, AIPrompt } = req.body;
+    const { userAnswer, answerKey, question, questionType, adminImageText, adminKeyImageText, adminImageAnalysis, studentImageAnalysis, AIPrompt } = req.body;
     try {
         let result;
+        //MULTIPLE CHOICE ..COMPARE ANSWER TO KEY AND AWARD FULL CREDIT IF MATCH, ZERO IF NOT. IF NO ANSWER KEY, AWARD FULL CREDIT AND FEEDBACK INDICATING AUTO-AWARDED
         if (questionType === 'multiple-choice') {
-            result = await gradeMultipleChoiceQuestion({ userAnswer, answerKey, question, adminImageText, studentImageTexts });
+            result = await gradeMultipleChoiceQuestion({ userAnswer, answerKey, question, adminImageText });
+        //BASIC QUESTION .."IS IT THERE" OR "HOW MANY ARE THERE" TYPE QUESTIONS WHERE AI PROMPT DEFINES GRADING CRITERIA
         } else if (questionType === 'basic') {
-            result = await gradeBasicQuestion({ userAnswer, aiPrompt: AIPrompt, question, adminImageText, studentImageTexts });
+            result = await gradeBasicQuestion({ userAnswer, aiPrompt: AIPrompt, question, adminImageText });
+        //IMAGE ANALYSIS QUESTIONS WITH BOTH STUDENT AND ADMIN ANALYSIS AVAILABLE — USE IMAGE FUSION GRADING
+        } else if (questionType === 'image-analysis') {
+            if (!adminImageAnalysis) return res.status(400).json({ error: 'Admin answer key does not contain an image analysis' });
+            if (!studentImageAnalysis) return res.status(400).json({ error: 'Student image analysis not found' });
+            result = await gradeImageAnalysisWithFusion({ studentAnalysis: studentImageAnalysis, adminAnalysis: adminImageAnalysis, question });
         } else {
-            result = await gradeTextQuestion({ userAnswer, answerKey, question, questionType, studentImageTexts, adminImageText, adminKeyImageText });
+            // Text grading — use text_extraction from studentImageAnalysis if available
+            const effectiveStudentImageTexts = studentImageAnalysis ? [studentImageAnalysis.text_extraction] : undefined;
+            result = await gradeTextQuestion({ userAnswer, answerKey, question, questionType, studentImageTexts: effectiveStudentImageTexts, adminImageText, adminKeyImageText });
         }
         return res.json(result);
     } catch (err: any) {
@@ -117,7 +127,8 @@ export const regradeSession = async (req: Request, res: Response) => {
             prisma.session.findUnique({ where: { labId_userId: { labId, userId } } })
         ]);
         if (!lab) return res.status(404).json({ error: `Lab ${labId} not found` });
-        const studentImageTexts: Record<string, string[]> = (session?.studentImageTexts as any) || {};
+        // const studentImageTexts: Record<string, string[]> = (session?.studentImageTexts as any) || {}; // deprecated
+        const studentImageAnalysis: Record<string, any> = (session?.studentImageAnalysis as any) || {};
 
         const blocks: any[] = Array.isArray(lab.blocks) ? lab.blocks : [];
         const questionLookup: Record<string, any> = {};
@@ -176,17 +187,25 @@ export const regradeSession = async (req: Request, res: Response) => {
                         aiPrompt: details.aiPrompt,
                         question: details.prompt,
                     });
+                } else if (details.type === 'image-analysis') {
+                    result = await gradeImageAnalysisWithFusion({
+                        studentAnalysis: studentImageAnalysis[questionId],
+                        adminAnalysis: details.keyImageAnalysis,
+                        question: details.prompt,
+                    });
                 } else {
                     result = await gradeTextQuestion({
                         userAnswer,
                         answerKey: details.key,
                         question: details.prompt,
                         questionType: details.type,
-                        studentImageTexts: studentImageTexts[questionId],
+                        studentImageTexts: studentImageAnalysis[questionId] ? [studentImageAnalysis[questionId].text_extraction] : undefined,
                         adminImageText: details.imageText,
                         adminKeyImageText: details.keyImageText,
                     });
+                }
 
+                if (!regradedResults[questionId]) {
                     regradedResults[questionId] = {
                         score: result.score,
                         feedback: result.feedback

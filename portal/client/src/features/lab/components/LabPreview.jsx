@@ -169,6 +169,7 @@ function LabPreview({
         let adminImageText = '';
         let adminKeyImageText = '';
         let blockAiPrompt = '';
+        let adminImageAnalysis = null;
 
         for (const block of blocks) {
             //for questions without subquestions
@@ -182,6 +183,7 @@ function LabPreview({
                 adminImageText = block.imageText || '';
                 adminKeyImageText = block.keyImageText || '';
                 blockAiPrompt = block.aiPrompt || '';
+                adminImageAnalysis = block.keyImageAnalysis || null;
                 break;
             }
             //for questions with subquestions
@@ -196,6 +198,7 @@ function LabPreview({
                         adminImageText = sq.imageText || block.imageText || '';
                         adminKeyImageText = sq.keyImageText || '';
                         blockAiPrompt = sq.aiPrompt || '';
+                        adminImageAnalysis = sq.keyImageAnalysis || null;
                         break;
                     }
                 }
@@ -225,27 +228,36 @@ function LabPreview({
             }
         }
 
-        // Extract text from any images in the user's answer — passed as ordered array for inline replacement on backend
+        // For image-analysis questions: analyze the student's image and store structured JSON
+        // For other types: extract text from images for inline replacement in grading
         let studentImageTexts = [];
+        let studentImageAnalysis = null;
         const images = extractAllImagesData(userAnswer);
 
         if (images.length > 0) {
-            studentImageTexts = await Promise.all(
-                images.map(async (imgData) => {
-                    try {
-                        const res = await axios.post(`${process.env.REACT_APP_API_LAB_HOST}/image/extract-text`, imgData);
-                        return res.data.text || 'No text present in image';
-                    } catch (err) {
-                        console.error('Failed to extract text from student image', err);
-                        return '';
-                    }
-                })
-            );
-            if (studentImageTexts.some(Boolean)) {
-                setSession(prev => ({
-                    ...prev,
-                    studentImageTexts: { ...(prev.studentImageTexts || {}), [questionId]: studentImageTexts }
-                }));
+            if (type === 'image-analysis') {
+                try {
+                    const res = await axios.post(`${process.env.REACT_APP_API_LAB_HOST}/image/analyze`, images[0]);
+                    studentImageAnalysis = res.data.analysis;
+                    setSession(prev => ({
+                        ...prev,
+                        studentImageAnalysis: { ...(prev.studentImageAnalysis || {}), [questionId]: studentImageAnalysis }
+                    }));
+                } catch (err) {
+                    console.error('Failed to analyze student image', err);
+                }
+            } else {
+                studentImageTexts = await Promise.all(
+                    images.map(async (imgData) => {
+                        try {
+                            const res = await axios.post(`${process.env.REACT_APP_API_LAB_HOST}/image/extract-text`, imgData);
+                            return res.data.text || 'No text present in image';
+                        } catch (err) {
+                            console.error('Failed to extract text from student image', err);
+                            return '';
+                        }
+                    })
+                );
             }
         }
 
@@ -272,7 +284,9 @@ function LabPreview({
                 AIPrompt: blockAiPrompt,
                 adminImageText,
                 adminKeyImageText,
-                studentImageTexts
+                adminImageAnalysis,
+                studentImageTexts,
+                studentImageAnalysis
             });
             return { score: response.data.score, feedback: response.data.feedback };
         }

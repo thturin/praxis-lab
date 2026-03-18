@@ -7,7 +7,8 @@ export const createQuestion = () => ({
   explanation:"",
   subQuestions: [],
   isScored:true,
-  imageText: ""
+  imageText: "",  //image text in question prompt
+  keyImageAnalysis: null, // structured ImageAnalysis JSON for the answer key image (image-analysis type)
 });
 
 export const createMaterial = () => ({

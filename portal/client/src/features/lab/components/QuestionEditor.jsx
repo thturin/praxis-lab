@@ -4,6 +4,7 @@ import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import { resolveImageSrcs } from './fetchImages';
 import ImageTextBox from './ImageTextBox';
+import ImageAnalysisBox from './ImageAnalysisBox';
 import axios from 'axios';
 
 
@@ -96,18 +97,26 @@ function QuestionEditor({ q, onQuestionChange, onQuestionDelete, level = 0, disp
                                     {showAnswerKey && (
                                         <div className="px-2 pb-2">
                                             <ReactQuill
-                                                placeholder="Admin Key"
+                                                placeholder="Admin Key" 
                                                 className="w-full border mb-2"
                                                 value={resolveImageSrcs(q.key) || ""}
                                                 onChange={value => update("key", value)}
                                                 modules={modules}
                                                 theme="snow"
                                             />
-                                            {q.key && q.key.includes('<img') && (
+                                            
+                                            {q.key && q.key.includes('<img') && q.type !== 'image-analysis' && (
                                                 <ImageTextBox
                                                     htmlContent={q.key}
                                                     imageText={q.keyImageText || ""}
                                                     onChange={(text) => update("keyImageText", text)}
+                                                />
+                                            )}
+                                            {q.key && q.key.includes('<img') && q.type === 'image-analysis' && (
+                                                <ImageAnalysisBox
+                                                    htmlContent={q.key}
+                                                    imageAnalysis={q.keyImageAnalysis || null}
+                                                    onChange={(analysis) => update("keyImageAnalysis", analysis)}
                                                 />
                                             )}
                                         </div>
@@ -247,6 +256,7 @@ function QuestionEditor({ q, onQuestionChange, onQuestionDelete, level = 0, disp
                         <option value="code">Java</option>
                         <option value="multiple-choice">Multiple Choice</option>
                         <option value="basic">Basic</option>
+                        <option value="image-analysis">Image Analysis</option>
                     </select>
                     {/* ADD SUB QUESTION BUTTON */}
 
