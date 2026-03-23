@@ -1,29 +1,30 @@
 import axios from 'axios';
+const { callLLM } = require('../llm/llmClient');
 
 interface VisionResult {
   text: string;
 }
 
-export interface ImageAnalysis {
+// Step 1 output — faithful recognition of what's in the image (gemini analysis)
+interface ImageAnalysis {
   text_extraction: string;
-  visual_components: {
-    elements: Array<{
-      id: string;
-      type: string;
-      description: string;
-      attributes: {
-        state: string;
-      };
-    }>;
-  };
-  logical_flow: {
-    process_type: string;
-    steps: Array<{
-      order: number;
-      action: string;
-      dependencies: string[];
-    }>;
-  };
+  diagram_type: string; // 'circuit' | 'block_program' | 'flowchart' | 'state_diagram' | 'other'
+  elements: Array<{
+    type: string;   // normalized functional type (e.g. D_flip_flop, NAND_gate, event_trigger)
+    label: string;  // label as it appears in the image
+    role: string;   // input | output | storage | logic | control | action | event
+  }>;
+  connections: Array<{
+    from: string;        // element label or signal name
+    to: string;          // element label or signal name
+    relationship: string; // drives | triggers | feeds | inverts | enables | connects_to
+  }>;
+}
+
+// Final output — used for grading comparison
+export interface TopologyAnalysis {
+  text_extraction: string;
+  topology_fingerprint: string[];
   analytical_summary: {
     primary_function: string;
     identified_pattern: string;
@@ -75,11 +76,10 @@ export async function extractImage(base64Data: string, mimeType: string): Promis
 }
 
 /**
- * Analyze an image using a vision LLM via OpenRouter.
- * Returns structured JSON analysis including text extraction, visual components,
- * logical flow, and analytical summary. Used for grading image-based questions.
+ * Step 1 — Vision model recognizes elements and connections from the image.
+ * Produces a faithful intermediate representation without semantic normalization.
  */
-export async function analyzeImage(base64Data: string, mimeType: string): Promise<ImageAnalysis> {
+async function analyzeImageStructure(base64Data: string, mimeType: string): Promise<ImageAnalysis> {
   const apiKey = process.env.OPEN_ROUTER_API_KEY;
   if (!apiKey) throw new Error('OPEN_ROUTER_API_KEY is not configured');
 
@@ -93,13 +93,18 @@ export async function analyzeImage(base64Data: string, mimeType: string): Promis
           content: [
             {
               type: 'text',
-              text: 'Analyze this image thoroughly and return a structured analysis.'
+              text: `Identify all components/blocks and their connections in this diagram.
+
+Normalize any IC part numbers or brand-specific labels to their functional type (e.g. 74HC00 → NAND_gate, 7474 → D_flip_flop, "when green flag clicked" → event_trigger).
+
+For connections, be specific enough to reveal the topology:
+- Circuits: use pin-level references (FF1.Q_inv → FF2.clk, not just FF1 → FF2). This is critical — FF1.Q_inv → FF2.clk means asynchronous ripple; CLK → FF1.clk AND CLK → FF2.clk means synchronous.
+- Block programs: use block outputs or branches (forever_loop.body → move_steps, if_block.true_branch → play_sound).
+- Flowcharts: use decision branch labels (decision.yes → action1, decision.no → action2).`
             },
             {
               type: 'image_url',
-              image_url: {
-                url: `data:${mimeType};base64,${base64Data}`,
-              },
+              image_url: { url: `data:${mimeType};base64,${base64Data}` },
             },
           ],
         },
@@ -108,8 +113,8 @@ export async function analyzeImage(base64Data: string, mimeType: string): Promis
         {
           type: 'function',
           function: {
-            name: 'analyze_image',
-            description: 'Return a structured analysis of the image',
+            name: 'extract_structure',
+            description: 'Return the elements and connections found in the diagram',
             parameters: {
               type: 'object',
               properties: {
@@ -117,65 +122,43 @@ export async function analyzeImage(base64Data: string, mimeType: string): Promis
                   type: 'string',
                   description: 'All raw text found in the image, transcribed verbatim'
                 },
-                visual_components: {
-                  type: 'object',
-                  properties: {
-                    elements: {
-                      type: 'array',
-                      items: {
-                        type: 'object',
-                        properties: {
-                          id: { type: 'string', description: 'Short unique identifier for this element' },
-                          type: { type: 'string', description: 'Type of element (e.g. D_flip_flop, AND_gate, node, decision)' },
-                          description: { type: 'string', description: 'What this element does in context' },
-                          attributes: {
-                            type: 'object',
-                            properties: {
-                              state: { type: 'string', description: 'Current or default state of the element' }
-                            },
-                            required: ['state']
-                          }
-                        },
-                        required: ['id', 'type', 'description', 'attributes']
-                      }
-                    }
-                  },
-                  required: ['elements']
+                diagram_type: {
+                  type: 'string',
+                  description: 'One of: circuit, block_program, flowchart, state_diagram, other'
                 },
-                logical_flow: {
-                  type: 'object',
-                  properties: {
-                    process_type: { type: 'string', description: 'e.g. sequential, conditional, parallel' },
-                    steps: {
-                      type: 'array',
-                      items: {
-                        type: 'object',
-                        properties: {
-                          order: { type: 'integer' },
-                          action: { type: 'string', description: 'What happens at this step' },
-                          dependencies: { type: 'array', items: { type: 'string' } }
-                        },
-                        required: ['order', 'action', 'dependencies']
-                      }
-                    }
-                  },
-                  required: ['process_type', 'steps']
+                elements: {
+                  type: 'array',
+                  description: 'Each component or block in the diagram. Use normalized functional types — convert IC part numbers and brand labels to their function.',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      type: { type: 'string', description: 'Normalized functional type (e.g. D_flip_flop, NAND_gate, event_trigger, forever_loop, move_steps)' },
+                      label: { type: 'string', description: 'Label as it appears in the image' },
+                      role: { type: 'string', description: 'One of: input, output, storage, logic, control, action, event' }
+                    },
+                    required: ['type', 'label', 'role']
+                  }
                 },
-                analytical_summary: {
-                  type: 'object',
-                  properties: {
-                    primary_function: { type: 'string', description: 'What this diagram/image does overall' },
-                    identified_pattern: { type: 'string', description: 'Design pattern or structure recognized' },
-                  },
-                  required: ['primary_function', 'identified_pattern']
+                connections: {
+                  type: 'array',
+                  description: 'Signal or control flow connections. Be specific enough to reveal topology. For circuits use pin-level references (FF1.Q_inv → FF2.clk). For block programs use block outputs or branches (if_block.true_branch, forever_loop.body). For flowcharts use decision branch labels (decision.yes, decision.no).',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      from: { type: 'string', description: 'Source with specificity — circuit: FF1.Q_inv, FF1.Q, CLK; block program: forever_loop.body, if_block.true_branch; flowchart: decision.yes' },
+                      to: { type: 'string', description: 'Destination with specificity — circuit: FF2.clk, FF2.D, LED.input; block program: move_steps.trigger; flowchart: action_block' },
+                      relationship: { type: 'string', description: 'One of: drives, triggers, feeds, inverts, enables, connects_to' }
+                    },
+                    required: ['from', 'to', 'relationship']
+                  }
                 }
               },
-              required: ['text_extraction', 'visual_components', 'logical_flow', 'analytical_summary']
+              required: ['text_extraction', 'diagram_type', 'elements', 'connections']
             }
           }
         }
       ],
-      tool_choice: { type: 'function', function: { name: 'analyze_image' } },
+      tool_choice: { type: 'function', function: { name: 'extract_structure' } },
       max_tokens: 2000,
       temperature: 0.1,
     },
@@ -192,41 +175,118 @@ export async function analyzeImage(base64Data: string, mimeType: string): Promis
     || response.data?.choices?.[0]?.message?.content
     || '';
 
-
   return JSON.parse(raw) as ImageAnalysis;
 }
 
-// {                                                                                                                                                           
-//     "text_extraction": "All raw text found in the image, transcribed verbatim...",                                                                            
-//     "visual_components": {                                                                                                                                    
-//       "elements": [
-//         {                                                                                                                                                     
-//           "id": "FF1",
-//           "type": "D_flip_flop",                                                                                                                              
-//           "description": "First stage storage element, triggered on rising clock edge",                                                                       
-//           "attributes": {                                                                                                                                     
-//             "state": "active"                                                                                                                                 
-//           }                                                                                                                                                   
-//         }         
-//       ]
-//     },
-//     "logical_flow": {
-//       "process_type": "sequential",                                                                                                                           
-//       "steps": [                                                                                                                                              
-//         {                                                                                                                                                     
-//           "order": 1,                                                                                                                                         
-//           "action": "Data enters FF1 on rising clock edge",
-//           "dependencies": []                                                                                                                                  
-//         },                                                                                                                                                    
-//         {                                                                                                                                                     
-//           "order": 2,                                                                                                                                         
-//           "action": "FF1 output shifts to FF2 on next clock cycle",
-//           "dependencies": ["FF1"]                                                                                                                             
-//         }
-//       ]                                                                                                                                                       
-//     },            
-//     "analytical_summary": {
-//       "primary_function": "4-bit serial-in parallel-out shift register",
-//       "identified_pattern": "Linear feedback shift register with AND gate output enable"
-//     }             
-//   }                            
+interface TopologyResult {
+  topology_fingerprint: string[];
+  analytical_summary: {
+    primary_function: string;
+    identified_pattern: string;
+  };
+}
+
+/**
+ * Step 2 — Text model generates topology fingerprint from the intermediate structure.
+ * Normalizes component identity, abstracts to relational semantics.
+ */
+async function createTopology(intermediate: ImageAnalysis): Promise<TopologyResult> {
+  const structureJson = JSON.stringify(intermediate, null, 2);
+
+  const raw = await callLLM({
+    messages: [
+      {
+        role: 'system',
+        content: `You are a diagram analysis expert. Given a structured description of a diagram, generate a topology fingerprint — a list of strings that describe relational connections.
+
+Rules for fingerprint strings:
+- Use snake_case
+- Use active verbs: drives, triggers, feeds, inverts, enables, connects_to
+- Use normalized functional types only — drop all student-assigned IDs and labels (IC1, U1, G1, FF1 → use functional position like first_dff, second_nand_gate)
+- Flow direction is always source → destination
+- The final string must describe the overall topology pattern
+
+Examples (circuit):
+- "2Hz_clock_drives_first_dff"
+- "first_dff_inverted_Q_triggers_second_dff_clock"
+- "logic_topology_is_asynchronous_4bit_ripple_counter"
+
+Examples (block program):
+- "green_flag_event_triggers_forever_loop"
+- "forever_loop_drives_move_10_steps"
+- "forever_loop_drives_edge_bounce_check"
+- "logic_topology_is_event_driven_continuous_motion_script"`
+      },
+      {
+        role: 'user',
+        content: `Generate the topology fingerprint for this diagram:\n\n${structureJson}`
+      }
+    ],
+    temperature: 0.1,
+    maxTokens: 1000,
+    tools: [
+      {
+        type: 'function',
+        function: {
+          name: 'generate_fingerprint',
+          description: 'Return the topology fingerprint and analytical summary',
+          parameters: {
+            type: 'object',
+            properties: {
+              topology_fingerprint: {
+                type: 'array',
+                items: { type: 'string' },
+                description: 'List of snake_case relational strings describing signal/control flow. Final entry must describe the overall topology pattern.'
+              },
+              analytical_summary: {
+                type: 'object',
+                properties: {
+                  primary_function: { type: 'string', description: 'What this diagram does overall, in plain English' },
+                  identified_pattern: { type: 'string', description: 'Design pattern or structure recognized (e.g. ripple counter, event-driven script, Moore state machine)' }
+                },
+                required: ['primary_function', 'identified_pattern']
+              }
+            },
+            required: ['topology_fingerprint', 'analytical_summary']
+          }
+        }
+      }
+    ]
+  });
+
+  return JSON.parse(raw);
+}
+
+/**
+ * Analyze an image using a two-step prompt chain:
+ * 1. Vision model (Gemini) — recognizes elements and connections
+ * 2. Text model (DeepSeek) — generates topology fingerprint and analytical summary
+ *
+ * Used for grading image-analysis type questions.
+ */
+export async function analyzeImage(base64Data: string, mimeType: string): Promise<TopologyAnalysis> {
+  let intermediate;
+  try{
+     intermediate = await analyzeImageStructure(base64Data, mimeType);
+     console.log('+++++++++++++++++++++++++++++++++++++++++Image structure analysis result+++++++++++++++++++++++++++++++++++++++\n', intermediate);
+  }catch(err){
+    console.error('Error in analyzeImageStructure:', err.response?.data || err.message);
+    throw new Error('Failed to analyze image structure');
+  }
+  let topologyResult;
+  try{
+    topologyResult= await createTopology(intermediate);
+    console.log('+++++++++++++++++++++++++++++++++++++++++Topology analysis result+++++++++++++++++++++++++++++++++++++++\n', topologyResult);
+  }catch(err){
+    console.error('Error in createTopology:', err.response?.data || err.message);
+    throw new Error('Failed to create topology from image analysis');
+  }
+  
+  const { topology_fingerprint, analytical_summary } = topologyResult;
+
+  return {
+    text_extraction: intermediate.text_extraction,
+    topology_fingerprint,
+    analytical_summary,
+  };
+}
