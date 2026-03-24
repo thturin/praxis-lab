@@ -29,6 +29,10 @@
 - [ ] `routes/fileRoutes.js`
 - [x] `services/grading/textGradingService.ts`
 - [x] `services/grading/javaGradingService.ts`
+- [x] `services/grading/imageGradingService.ts`
+- [x] `services/grading/embeddingService.ts`
+- [x] `services/grading/feedbackService.ts`
+- [x] `services/vision/visionService.ts`
 - [x] `services/prompts/gradingPrompts.ts`
 - [ ] `services/prompts/systemPrompts.js`
 - [x] `services/scoring/scoringService.ts`

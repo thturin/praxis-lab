@@ -225,7 +225,7 @@ export const regradeSession = async (req: Request, res: Response) => {
         // Ensure all scored questions appear in results, even if student left them blank
         for (const questionId of Object.keys(questionLookup)) {
             if (!regradedResults[questionId]) {
-                regradedResults[questionId] = { score: 0, feedback: 'No response submitted' };
+                regradedResults[questionId] = { score: 0, feedback: 'Student left blank' };
             }
         }
 

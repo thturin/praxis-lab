@@ -86,7 +86,9 @@ async function analyzeImageStructure(base64Data: string, mimeType: string): Prom
   const response = await axios.post(
     'https://openrouter.ai/api/v1/chat/completions',
     {
-      model: 'google/gemini-2.0-flash-lite-001',
+      //model: 'google/gemini-2.0-flash-lite-001',
+      //model: 'google/gemini-2.5-pro',  // reasoning mode — does not emit tool_calls
+      model: 'google/gemini-3-flash-preview',
       messages: [
         {
           role: 'user',
@@ -97,8 +99,13 @@ async function analyzeImageStructure(base64Data: string, mimeType: string): Prom
 
 Normalize any IC part numbers or brand-specific labels to their functional type (e.g. 74HC00 → NAND_gate, 7474 → D_flip_flop, "when green flag clicked" → event_trigger).
 
+General rules for connections:
+- Never create a self-referential connection — from and to must be different elements or pins.
+- Every signal source that enters the diagram from outside (clock, input pin, event trigger, sensor) must appear as a separate element with role "input".
+- Record each distinct signal path as its own connection entry.
+
 For connections, be specific enough to reveal the topology:
-- Circuits: use pin-level references (FF1.Q_inv → FF2.clk, not just FF1 → FF2). This is critical — FF1.Q_inv → FF2.clk means asynchronous ripple; CLK → FF1.clk AND CLK → FF2.clk means synchronous.
+- Circuits: use pin-level references. For each flip-flop trace its clock pin and data pin separately. A ripple counter has FF1.Q_inv → FF2.clk (inverted Q drives the next FF's clock); a shift register has FF1.Q → FF2.D (Q drives the next FF's data input). A synchronous design has the external CLK driving every FF's clk pin individually (CLK → FF1.clk, CLK → FF2.clk, etc.).
 - Block programs: use block outputs or branches (forever_loop.body → move_steps, if_block.true_branch → play_sound).
 - Flowcharts: use decision branch labels (decision.yes → action1, decision.no → action2).`
             },
@@ -171,10 +178,8 @@ For connections, be specific enough to reveal the topology:
     }
   );
 
-  const raw = response.data?.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments
-    || response.data?.choices?.[0]?.message?.content
-    || '';
-
+  const message = response.data?.choices?.[0]?.message;
+  const raw = message?.tool_calls?.[0]?.function?.arguments|| message?.content|| '';
   return JSON.parse(raw) as ImageAnalysis;
 }
 

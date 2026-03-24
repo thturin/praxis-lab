@@ -228,36 +228,27 @@ function LabPreview({
             }
         }
 
-        // For image-analysis questions: analyze the student's image and store structured JSON
-        // For other types: extract text from images for inline replacement in grading
-        let studentImageTexts = [];
+        // image-analysis: full two-step analysis (Gemini + DeepSeek) → TopologyAnalysis
+        // all other types: simple text extraction (Gemini only) → { text_extraction }
+        // both stored in studentImageAnalysis — studentImageTexts is deprecated
         let studentImageAnalysis = null;
         const images = extractAllImagesData(userAnswer);
 
         if (images.length > 0) {
-            if (type === 'image-analysis') {
-                try {
+            try {
+                if (type === 'image-analysis') {
                     const res = await axios.post(`${process.env.REACT_APP_API_LAB_HOST}/image/analyze`, images[0]);
                     studentImageAnalysis = res.data.analysis;
-                    setSession(prev => ({
-                        ...prev,
-                        studentImageAnalysis: { ...(prev.studentImageAnalysis || {}), [questionId]: studentImageAnalysis }
-                    }));
-                } catch (err) {
-                    console.error('Failed to analyze student image', err);
+                } else {
+                    const res = await axios.post(`${process.env.REACT_APP_API_LAB_HOST}/image/extract-text`, images[0]);
+                    studentImageAnalysis = { text_extraction: res.data.text || '' };
                 }
-            } else {
-                studentImageTexts = await Promise.all(
-                    images.map(async (imgData) => {
-                        try {
-                            const res = await axios.post(`${process.env.REACT_APP_API_LAB_HOST}/image/extract-text`, imgData);
-                            return res.data.text || 'No text present in image';
-                        } catch (err) {
-                            console.error('Failed to extract text from student image', err);
-                            return '';
-                        }
-                    })
-                );
+                setSession(prev => ({
+                    ...prev,
+                    studentImageAnalysis: { ...(prev.studentImageAnalysis || {}), [questionId]: studentImageAnalysis }
+                }));
+            } catch (err) {
+                console.error('Failed to process student image', err);
             }
         }
 
@@ -285,7 +276,6 @@ function LabPreview({
                 adminImageText,
                 adminKeyImageText,
                 adminImageAnalysis,
-                studentImageTexts,
                 studentImageAnalysis
             });
             return { score: response.data.score, feedback: response.data.feedback };

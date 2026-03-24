@@ -268,7 +268,6 @@ export const gradeTextQuestion = async (params: GradeTextQuestionParams): Promis
   const { userAnswer, answerKey, question, questionType, studentImageTexts, adminImageText, adminKeyImageText } = params;
 
   const { effectiveAnswer, effectiveQuestion, effectiveAnswerKey } = prepareGradingInputs({ userAnswer, question, studentImageTexts, adminImageText, answerKey, adminKeyImageText });
-
   if (!effectiveAnswer.trim()) return { score: 0, feedback: 'No response submitted', skipped: true };
   if (!effectiveAnswerKey?.trim()) return { score: 1, feedback: 'Answer key missing; awarding full credit', skipped: true };
 
