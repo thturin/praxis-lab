@@ -116,6 +116,7 @@ function LabBuilder({ blocks, setBlocks,
             const updatedSubQuestions = await Promise.all(
                 (block.subQuestions || []).map(async (sq) => ({
                     ...sq,
+                    key: await inlineImagesAsDataUrls(sq.key),
                     prompt: await inlineImagesAsDataUrls(sq.prompt),
                     explanation: await inlineImagesAsDataUrls(sq.explanation)
                 }))
