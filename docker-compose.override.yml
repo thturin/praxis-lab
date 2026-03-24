@@ -1,0 +1,31 @@
+
+#this override file is for development purposes only
+#it sets services to restart unless-stopped and enables nodemon for api services
+services:
+  redis:
+    restart: unless-stopped
+
+  portal-db:
+    restart: unless-stopped
+
+  lab-creator-db:
+    restart: unless-stopped
+
+  portal-api:
+    restart: unless-stopped
+    command: npx nodemon app.js
+    environment:
+      NODE_ENV: development
+
+  portal-client:
+    restart: unless-stopped
+    environment:
+      FAST_REFRESH: "true"
+      WATCHPACK_POLLING: "true"
+      CHOKIDAR_USEPOLLING: "true"
+
+  lab-creator-api:
+    restart: unless-stopped
+    command: npx nodemon --exec tsx --ext js,ts,json app.js
+    environment:
+      NODE_ENV: development

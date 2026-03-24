@@ -1,0 +1,105 @@
+We did not updte the docker-compose file to create a separate container for java sandbox 
+# docker-compose.yml
+services:
+  java-sandbox:
+    image: java-grading-sandbox:latest
+    container_name: java-sandbox
+    ports:
+      - "9000:9000"
+    # Some API to receive code and execute it
+    command: ["node", "sandbox-api.js"]
+
+Why this is not a the best idea...
+1. security risk
+    -If student A submits malicious code, it could affect student B's execution
+    -State pollution between submissions
+    -Container compromise affects all future submissions
+2. Cleanup Complexity:
+    -Need to manually clean up temp files after each execution
+    -Risk of disk filling up
+    -No automatic container restart for clean state
+3. Concurrency Issues:
+    -Need to implement queueing inside the container
+    -Race conditions if multiple requests come in
+    -Complex state management
+
+INSTEAD WE DID THIS 
+Host Machine (your server/laptop)
+├── Docker Engine
+│   ├── lab-creator-api container (running)
+│   │   └── Has access to Docker socket
+│   │
+│   └── java-grading-sandbox container (created on-demand by lab-creator)
+│       └── Executes student code, then gets destroyed
+
+Lab Creator container runs continuously
+Lab Creator has access to the Docker socket via volume mount:
+
+volumes:
+  - /var/run/docker.sock:/var/run/docker.sock
+When a student submits code, Lab Creator uses the Docker API to spawn a new sibling container
+The sandbox container runs, executes tests, and then gets destroyed
+Lab Creator and sandbox are siblings - both children of the host's Docker engine
+Visual Diagram
+
+
+
+┌─────────────────────────────────────────────────────────────┐
+│                        Host Machine                          │
+│                                                               │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │              Docker Engine (daemon)                  │   │
+│  │                                                       │   │
+│  │  ┌──────────────────────┐  ┌─────────────────────┐ │   │
+│  │  │  lab-creator-api     │  │ java-grading-sandbox│ │   │
+│  │  │  (always running)    │  │  (temporary)        │ │   │
+│  │  │                      │  │                     │ │   │
+│  │  │  - Node.js app       │  │  - JDK 17 + Maven  │ │   │
+│  │  │  - dockerode lib     │──▶│  - Runs tests      │ │   │
+│  │  │  - Docker socket     │  │  - Gets destroyed   │ │   │
+│  │  │    access            │  │                     │ │   │
+│  │  └──────────────────────┘  └─────────────────────┘ │   │
+│  │                                                       │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                               │
+│  /tmp/exec-123456/  ← Lab Creator creates files here        │
+│  └── src/main/java/Solution.java                            │
+│                                                               │
+└─────────────────────────────────────────────────────────────┘
+
+The Docker socket (/var/run/docker.sock) is like a phone line to the Docker engine. When Lab Creator mounts it:
+
+const docker = new Docker({ socketPath: '/var/run/docker.sock' });
+await docker.createContainer({...}); // Creates sibling, not child
+It's calling the host's Docker engine and saying "please create a new container for me." The host Docker engine creates it as a sibling.
+
+WHY THIS OPTION IS THE BEST 
+1. each submission has its own container (isolation)
+2. bad code can't affect another submissions code 
+3. cleaning up (deleting temp files) is easier
+4. 
+
+
+
+OVERVIEW 
+
+Aspect	Static Container (Your Idea)	Dynamic Containers (Current Plan)
+Isolation	❌ Shared environment	✅ Complete isolation
+Security	❌ One compromise affects all	✅ Each submission isolated
+Resources	❌ Shared 512MB across all	✅ 512MB per submission
+Cleanup	❌ Manual file cleanup needed	✅ Auto-cleanup on destroy
+Complexity	❌ Need sandbox API + queue	✅ Simple: create, run, destroy
+Concurrency	❌ Complex to manage	✅ Natural parallelism
+State	❌ Stateful, risk of bugs	✅ Stateless, predictable
+
+
+DYNAMIC CONTAINER FILE STRUCTURE 
+/workspace/                          ← Container's working directory
+├── pom.xml                          ← Maven config (from pomXmlFile.js)
+├── src/
+│   ├── main/
+│   │   └── java/
+│   │       └── Solution.java        ← Student's submitted code
+│   └── test/
+│       └── java/
+│           └── SolutionTest.java    ← AI-generated JUnit tests

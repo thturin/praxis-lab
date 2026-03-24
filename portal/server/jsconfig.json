@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "checkJs": true,
+    "allowJs": true,
+    "noEmit": true,
+    "strict": false,
+    "esModuleInterop": true,
+    "moduleResolution": "node",
+    "target": "ES2022"
+  },
+  "include": ["./**/*.js"],
+  "exclude": ["node_modules", "uploads", "tmp"]
+}

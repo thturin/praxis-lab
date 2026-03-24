@@ -7,16 +7,49 @@ pnpm-debug.log*
 
 # Logs
 logs/
+# Caches
+.cache/
+.npm/
+.eslintcache
+
+# IDE/editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 *.log
 
 # dotenv environment variables
 .env
+
+# Uploads and temp data
+**/uploads/
+**/tmp/
+**/temp/
+sessions/
+portal/server/sessions/
+portal/server/templates/*
+!portal/server/templates/.gitkeep
+**/production-imports/
+
+# dotenv environment variables
 .env.*
 
+**/.env
+**/.env.*
 # OS files
 .DS_Store
 Thumbs.db
 
+
+# Database artifacts
+**/prisma/dev.db
+**/prisma/*.sqlite
+prisma/.env
+**/prisma/.env
+**/prisma/generated/
+**/.prisma/
 # Docker
 **/pgdata/
 **/postgres-data/
@@ -25,6 +58,8 @@ Thumbs.db
 
 # Build output
 dist/
+**/dist/
+**/build/
 build/
 
 # VS Code settings
@@ -33,6 +68,17 @@ build/
 # React build
 portal/client/build/
 lab-creator/client/build/
+# Coverage
+coverage/
+**/coverage/
+*.lcov
+.nyc_output
+
+# OS backups
+*.bak
+*.backup
+*.old
+*.orig
 
 # Prisma
 **/prisma/dev.db
@@ -41,3 +87,7 @@ lab-creator/client/build/
 # Misc
 *.swp
 *.swo
+
+
+#docs
+docs/

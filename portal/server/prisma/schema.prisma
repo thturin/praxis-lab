@@ -1,0 +1,90 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "debian-openssl-1.1.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+model User{
+  id              Int           @id @default(autoincrement())
+  schoolId        String?       @unique
+  email           String?       @unique
+  username        String?       @unique
+  password        String?  
+  firstName       String?
+  lastName        String?
+  name            String?
+  githubId        String?       @unique
+  githubUsername  String?       @unique
+  submission      Submission[]
+  role            String 
+  sectionId       Int?
+  section         Section? @relation("SectionStudents", fields: [sectionId], references: [id])
+  adminSections   AdminSection[]
+  isSuperAdmin    Boolean       @default(false)
+       
+}
+
+model Submission {
+  id            Int       @id @default(autoincrement())
+  url           String?
+  language      String?
+  score         Float?
+  rawScore      Float?
+  feedback      String? 
+  submittedAt   DateTime  @default(now())
+  assignment    Assignment @relation(fields: [assignmentId], references: [id])
+  assignmentId  Int
+  user          User? @relation(fields:[userId], references: [id])
+  userId        Int?
+  
+  @@unique([userId, assignmentId])
+}
+
+model Assignment {
+  id                  Int      @id @default(autoincrement())
+  title               String
+  dueDate             DateTime
+  type                String
+  labId               Int?
+  showExplanations    Boolean @default(false)
+  isDraft             Boolean @default(true)
+  submissions         Submission[]
+  sections            AssignmentSection[]
+}
+
+model Section{
+  id            Int                 @id @default(autoincrement())
+  name          String
+  sectionCode   String              @unique
+  students      User[]              @relation("SectionStudents")
+  assignments   AssignmentSection[]
+  admins        AdminSection[]
+}
+
+model AssignmentSection {
+  assignment   Assignment @relation(fields: [assignmentId], references: [id])
+  assignmentId Int
+  section      Section    @relation(fields: [sectionId], references: [id])
+  sectionId    Int
+
+  @@id([assignmentId, sectionId])
+}
+
+model AdminSection {
+  user      User    @relation(fields: [userId], references: [id])
+  userId    Int
+  section   Section @relation(fields: [sectionId], references: [id])
+  sectionId Int
+  @@id([userId, sectionId])
+}
+

@@ -5,6 +5,7 @@ networks:
 services:
   redis:
     image: redis:7
+    container_name: redis
     command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}"]
     ports:
       - "16379:6379"          # expose to host if needed
@@ -12,7 +13,7 @@ services:
       REDIS_PASSWORD: ${REDIS_PASSWORD}
     networks:
       - edu-platform-network
-    restart: no
+    restart: unless-stopped
   portal-db:
     image: postgres:16
     container_name: portal-db
@@ -23,10 +24,10 @@ services:
     ports:
       - "15432:5432"
     volumes:
-      - pgdata-portal:/var/lib/postgresql/data
+      - /home/tatiana-turin/projects/databases/portal:/var/lib/postgresql/data
     networks:
       - edu-platform-network
-    restart: unless-stopped
+    restart: no
   lab-creator-db:
     image: postgres:16
     container_name: lab-creator-db
@@ -37,7 +38,7 @@ services:
     ports:
       - "15433:5432"
     volumes:
-      - pgdata-lab-creator:/var/lib/postgresql/data
+      - /home/tatiana-turin/projects/databases/lab-creator:/var/lib/postgresql/data
     networks:
       - edu-platform-network
     restart: no
@@ -78,6 +79,7 @@ services:
     environment:
       REACT_APP_API_HOST: ${REACT_APP_API_HOST}
       REACT_APP_API_LAB_HOST: ${REACT_APP_API_LAB_HOST}
+      STREAMLIT_API_URL: ${STREAMLIT_API_URL}
       # Add WebSocket configuration to enable hotreloading
       WDS_SOCKET_PORT: 13000 #lets websocket  use main react port
       FAST_REFRESH: true
@@ -100,16 +102,24 @@ services:
     container_name: lab-creator-api
     ports:
       - "14000:4000"
-      - "5556:5555"
+      - "5556:5555" #for npx prisma studio
     environment:
       DATABASE_URL: ${LABCREATOR_DATABASE_URL}
+      VOYAGER_API_KEY: ${VOYAGER_API_KEY}
+      PORTAL_DATABASE_URL: ${PORTAL_DATABASE_URL}
+      PORTAL_API_URL: ${PORTAL_API_URL}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
       NODE_ENV: ${NODE_ENV}
+      HOST_APP_PATH: ${HOST_APP_PATH}
+      BOXY_API_KEY: ${BOXY_API_KEY}
+      OPEN_ROUTER_API_KEY: ${OPEN_ROUTER_API_KEY}
     depends_on:
       - lab-creator-db
     volumes:
-      - ./lab-creator/server:/app
+      - ./lab-creator/server:/app #the whole server code
+      - /var/run/docker.sock:/var/run/docker.sock  # Enable this container to have access
+      #to the host's Docker daemon to run grading containers
     #  - lab-creator-api-node-modules:/app/node_modules
    # command: npx nodemon app.js
     networks:
@@ -118,34 +128,22 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
-  # lab-creator-client:
-  #   build: ./lab-creator/client
-  #   container_name: lab-creator-client
-  #   ports:
-  #     - "13001:3001"
-  #   environment:
-  #     REACT_APP_SERVER_HOST: ${REACT_APP_SERVER_HOST}
-  #     REACT_APP_CLIENT_PORTAL_HOST: ${REACT_APP_CLIENT_PORTAL_HOST}
-  #     # Add WebSocket configuration to enable hotreloading
-  #     WDS_SOCKET_PORT: 13001 #lets websocket  use main react port
-  #     FAST_REFRESH: true
-  #     WATCHPACK_POLLING: true
-  #     CHOKIDAR_USEPOLLING: "true"
-  #   depends_on:
-  #     - lab-creator-api
-  #   volumes:
-  #     - ./lab-creator/client:/app
-  #   #  - lab-creator-client-node-modules:/app/node_modules
-  #   command: npm start
-  #   networks:
-  #     - edu-platform-network
 
 
+  analytics:
+    build: ./analytics
+    container_name: analytics
+    ports:
+      - "18501:8501"
+    environment:
+      PORTAL_DATABASE_URL: ${PORTAL_DATABASE_URL}
+      LABCREATOR_DATABASE_URL: ${LABCREATOR_DATABASE_URL}
+    depends_on:
+      - portal-db
+      - lab-creator-db
+    volumes:
+      - ./analytics:/app
+    networks:
+      - edu-platform-network
+    restart: no
 
-volumes:
-  pgdata-portal:
-  pgdata-lab-creator:
-  # portal-api-node-modules:
-  # portal-client-node-modules:
-  # lab-creator-api-node-modules:
-  # lab-creator-client-node-modules:

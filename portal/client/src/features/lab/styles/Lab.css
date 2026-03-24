@@ -1,0 +1,99 @@
+/* Left-align ALL content - more comprehensive targeting */
+.ql-editor, 
+.ql-editor *, 
+.preview-content, 
+.preview-content *,
+.material-block,
+.material-block *,
+.question-block,
+.question-block *,
+div[dangerouslySetInnerHTML],
+div[dangerouslySetInnerHTML] * {
+    text-align: left !important;
+}
+
+/* Target any content that might be centered by default */
+.bg-gray-50, .bg-gray-50 *,
+.bg-white, .bg-white *,
+.rounded-lg, .rounded-lg *,
+.border-2, .border-2 *,
+.border-slate-900, .border-slate-900 * {
+    text-align: left !important;
+}
+
+/* Font styling for editor */
+.ql-editor {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+    font-size: 14px !important;
+    line-height: 1.5 !important;
+}
+
+/* Font styling for preview and material content */
+.preview-content,
+.material-block,
+div[dangerouslySetInnerHTML] {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+    font-size: 14px !important;
+    line-height: 1.5 !important;
+}
+
+/* Ensure all child elements inherit proper alignment and font */
+.preview-content *, 
+.material-block *,
+div[dangerouslySetInnerHTML] *,
+.ql-editor * {
+    text-align: left !important;
+    font-family: inherit !important;
+}
+
+/* Code block styling - force Courier font */
+pre, pre *,
+code, code *,
+.ql-code-block, .ql-code-block *,
+[class*="code"], [class*="code"] * {
+    font-family: 'Courier New', Courier, monospace !important;
+    background-color: #f4f4f4 !important;
+    padding: 4px !important;
+    border-radius: 3px !important;
+    text-align: left !important;
+}
+
+/* Override any global centering styles */
+* {
+    text-align: inherit !important;
+}
+
+/* Specific targeting for common HTML elements that might get centered */
+p, div, span, h1, h2, h3, h4, h5, h6, 
+ul, ol, li, blockquote, table, td, th {
+    text-align: left !important;
+}
+
+/* Force left alignment on the lab preview container and all children */
+.ml-8, .ml-8 * {
+    text-align: left !important;
+}
+
+/* Set Courier as default font for ReactQuill editors */
+.ql-editor {
+    font-family: 'Courier New', Courier, monospace !important;
+    font-size: 14px !important;
+    line-height: 1.4 !important;
+    text-align: left !important;
+}
+
+/* Ensure all content in editor uses Courier */
+.ql-editor * {
+    font-family: 'Courier New', Courier, monospace !important;
+    text-align: left !important;
+}
+
+/* Apply same font to preview content */
+.preview-content,
+.material-block,
+div[dangerouslySetInnerHTML] {
+    font-family: 'Courier New', Courier, monospace !important;
+    font-size: 14px !important;
+    line-height: 1.4 !important;
+    text-align: left !important;
+}

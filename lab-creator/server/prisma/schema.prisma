@@ -1,0 +1,45 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  binaryTargets=["native", "debian-openssl-1.1.x","linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+model Session {
+  id            String   @id @default(uuid())
+  labId         Int
+  lab           Lab      @relation(fields: [labId], references: [id])
+  labTitle      String   // optional: keep for convenience/copy of title
+
+  username      String
+  userId        Int
+  responses         Json
+  gradedResults     Json
+  finalScore        Json
+  studentImageTexts    Json @default("{}") // deprecated — use studentImageAnalysis
+  studentImageAnalysis Json @default("{}")  // { questionId: "" }
+  lastModified  DateTime @updatedAt
+  createdAt     DateTime @default(now())
+  @@unique([labId, userId])
+}
+
+model Lab {
+  id           Int        @id @default(autoincrement())
+  title        String
+  blocks       Json
+  createdAt    DateTime   @default(now())
+  assignmentId Int        @unique
+  sessions     Session[]
+  aiPrompt     String?
+}
+
