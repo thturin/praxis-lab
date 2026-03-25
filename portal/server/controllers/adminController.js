@@ -31,21 +31,12 @@ const exportAssignmentsCsvByName = async (req, res) => {
             include: { user: true, assignment: true }
         });
 
-        function toLastFirst(name) { //use last, first format for matching 'turin, tatiana'
-            // Remove quotes and ID, then split
-            name = name.replace(/"/g, '').replace(/\(\d+\)/, '').trim();
-            const parts = name.split(' ');
-            if (parts.length < 2) return name.toLowerCase();
-            const first = parts[0];
-            const last = parts.slice(1).join(' ');
-            return `${last}, ${first}`.toLowerCase();
-        }
-         
+      
         // Build score map by normalized name
         const scoreMap = {};
         submissions.forEach(sub => {
-            if (sub.user && sub.user.name) {
-                const normName = toLastFirst(sub.user.name);
+            if (sub.user && sub.user.lastName && sub.user.firstName) {
+                const normName = `${sub.user.lastName}, ${sub.user.firstName}`.toLowerCase();
                 scoreMap[normName] = sub.score;
             }
         });

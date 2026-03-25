@@ -3,7 +3,7 @@ const { parseTextFromHtml } = require('./parseHtml');
 export interface PrepareGradingInputsParams {
   userAnswer: string;
   question: string;
-  studentImageTexts?: string[];
+  studentImageText?: string[];
   adminImageText?: string;
   answerKey?: string;
   adminKeyImageText?: string;
@@ -15,11 +15,11 @@ export interface PreparedGradingInputs {
   effectiveAnswerKey?: string;
 }
 
-export const prepareGradingInputs = ({ userAnswer, question, studentImageTexts, adminImageText, answerKey, adminKeyImageText }: PrepareGradingInputsParams): PreparedGradingInputs => {
+export const prepareGradingInputs = ({ userAnswer, question, studentImageText, adminImageText, answerKey, adminKeyImageText }: PrepareGradingInputsParams): PreparedGradingInputs => {
   // Inline student image texts into the answer (each <img> replaced with extracted text in order)
   let imgIndex = 0;
   const htmlWithInlineImages = (userAnswer || '').replace(/<img[^>]*>/gi, () => {
-    const text = studentImageTexts?.[imgIndex];
+    const text = studentImageText?.[imgIndex];
     imgIndex++;
     return text ? `[Screenshot ${imgIndex}: ${text}]` : '';
   });

@@ -242,6 +242,7 @@ function LabPreview({
                 } else {
                     const res = await axios.post(`${process.env.REACT_APP_API_LAB_HOST}/image/extract-text`, images[0]);
                     studentImageAnalysis = { text_extraction: res.data.text || '' };
+                    console.log('Extracted text from student image:', studentImageAnalysis.text_extraction);
                 }
                 setSession(prev => ({
                     ...prev,
@@ -252,6 +253,7 @@ function LabPreview({
             }
         }
 
+        console.log('Grading question', questionId, { question, answerKey, userAnswer, type, generatedTestCode, adminImageText, adminKeyImageText, blockAiPrompt, adminImageAnalysis, studentImageAnalysis });
         //for code questions
         if (type === 'code') {
             const response = await axios.post(`${process.env.REACT_APP_API_LAB_HOST}/grade/java`, {
@@ -267,6 +269,7 @@ function LabPreview({
                 generatedTests: response.data.generatedTests
             };
         } else { //NON CODING QUESTION
+           
             const response = await axios.post(`${process.env.REACT_APP_API_LAB_HOST}/grade/question`, {
                 userAnswer,
                 answerKey,

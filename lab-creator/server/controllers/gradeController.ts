@@ -71,7 +71,7 @@ export const gradeQuestion = async (req: Request, res: Response) => {
             result = await gradeMultipleChoiceQuestion({ userAnswer, answerKey, question, adminImageText });
         //BASIC QUESTION .."IS IT THERE" OR "HOW MANY ARE THERE" TYPE QUESTIONS WHERE AI PROMPT DEFINES GRADING CRITERIA
         } else if (questionType === 'basic') {
-            result = await gradeBasicQuestion({ userAnswer, aiPrompt: AIPrompt, question, adminImageText });
+            result = await gradeBasicQuestion({ userAnswer, aiPrompt: AIPrompt, question, adminImageText, studentImageText: studentImageAnalysis ? [studentImageAnalysis.text_extraction] : undefined });
         //IMAGE ANALYSIS QUESTIONS WITH BOTH STUDENT AND ADMIN ANALYSIS AVAILABLE — USE IMAGE FUSION GRADING
         } else if (questionType === 'image-analysis') {
             if (!adminImageAnalysis) return res.status(400).json({ error: 'Admin answer key does not contain an image analysis' });
