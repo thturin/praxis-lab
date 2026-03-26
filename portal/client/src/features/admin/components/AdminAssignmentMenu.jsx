@@ -10,6 +10,12 @@ const AdminAssignmentMenu = ({
 }) => {
 
     const [expandedSections, setExpandedSections] = useState({});
+    const [sectionPages, setSectionPages] = useState({});
+
+    const SECTION_PAGE_SIZE = 5;
+
+    const getSectionPage = (sectionId) => sectionPages[sectionId] ?? 0;
+    const setSectionPage = (sectionId, page) => setSectionPages(prev => ({ ...prev, [sectionId]: page }));
 
     const sectionColors = [
         '#e8f0f7', // muted blue
@@ -106,7 +112,10 @@ const AdminAssignmentMenu = ({
                     
                     const bgColor = sectionColors[idx % sectionColors.length];
                     const isExpanded = expandedSections[section.id];
-                    
+                    const page = getSectionPage(section.id);
+                    const totalPages = Math.ceil(sectionAssignments.length / SECTION_PAGE_SIZE);
+                    const pageAssignments = sectionAssignments.slice(page * SECTION_PAGE_SIZE, (page + 1) * SECTION_PAGE_SIZE);
+
                     return (
                         <div key={section.id} style={{ marginBottom: '8px' }}>
                             {/* Section Header - Clickable */}
@@ -142,9 +151,9 @@ const AdminAssignmentMenu = ({
                                     borderRadius: '4px',
                                     overflow: 'hidden'
                                 }}>
-                                    {sectionAssignments.map((ass, assIdx) => {
+                                    {pageAssignments.map((ass, assIdx) => {
                                         const isSelected = selectedAssignmentId === ass.id;
-                                        
+
                                         return (
                                             <div
                                                 key={ass.id}
@@ -154,7 +163,7 @@ const AdminAssignmentMenu = ({
                                                     cursor: 'pointer',
                                                     backgroundColor: isSelected ? '#fff' : 'transparent',
                                                     borderLeft: isSelected ? '4px solid #2196F3' : '4px solid transparent',
-                                                    borderBottom: assIdx < sectionAssignments.length - 1 ? '1px solid #e0e0e0' : 'none',
+                                                    borderBottom: assIdx < pageAssignments.length - 1 ? '1px solid #e0e0e0' : 'none',
                                                     fontWeight: isSelected ? 'bold' : 'normal',
                                                     transition: 'all 0.2s'
                                                 }}
@@ -182,6 +191,43 @@ const AdminAssignmentMenu = ({
                                             </div>
                                         );
                                     })}
+
+                                    {totalPages > 1 && (
+                                        <div style={{
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                            padding: '8px 16px',
+                                            borderTop: '1px solid #e0e0e0',
+                                            backgroundColor: bgColor
+                                        }}>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); setSectionPage(section.id, page - 1); }}
+                                                disabled={page === 0}
+                                                style={{
+                                                    padding: '4px 12px',
+                                                    cursor: page === 0 ? 'default' : 'pointer',
+                                                    opacity: page === 0 ? 0.4 : 1
+                                                }}
+                                            >
+                                                ← Prev
+                                            </button>
+                                            <span style={{ fontSize: '13px', color: '#555' }}>
+                                                Page {page + 1} of {totalPages}
+                                            </span>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); setSectionPage(section.id, page + 1); }}
+                                                disabled={page >= totalPages - 1}
+                                                style={{
+                                                    padding: '4px 12px',
+                                                    cursor: page >= totalPages - 1 ? 'default' : 'pointer',
+                                                    opacity: page >= totalPages - 1 ? 0.4 : 1
+                                                }}
+                                            >
+                                                Next →
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -189,65 +235,109 @@ const AdminAssignmentMenu = ({
                 })}
 
                 {/* Unassigned assignments */}
-                {assignmentsBySection['unassigned']?.length > 0 && (
-                    <div style={{ marginBottom: '8px', marginTop: '16px' }}>
-                        <div
-                            onClick={() => toggleSection('unassigned')}
-                            style={{
-                                backgroundColor: '#ffebee',
-                                padding: '12px 16px',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                fontWeight: 'bold',
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center'
-                            }}
-                        >
-                            <span>⚠️ Unassigned ({assignmentsBySection['unassigned'].length})</span>
-                            <span style={{ fontSize: '18px' }}>
-                                {expandedSections['unassigned'] ? '▼' : '▶'}
-                            </span>
-                        </div>
+                {assignmentsBySection['unassigned']?.length > 0 && (() => {
+                    const unassigned = assignmentsBySection['unassigned'];
+                    const page = getSectionPage('unassigned');
+                    const totalPages = Math.ceil(unassigned.length / SECTION_PAGE_SIZE);
+                    const pageAssignments = unassigned.slice(page * SECTION_PAGE_SIZE, (page + 1) * SECTION_PAGE_SIZE);
 
-                        {expandedSections['unassigned'] && (
-                            <div style={{
-                                marginTop: '4px',
-                                marginLeft: '16px',
-                                border: '2px solid #ffebee',
-                                borderRadius: '4px',
-                                overflow: 'hidden'
-                            }}>
-                                {assignmentsBySection['unassigned'].map((ass, assIdx) => {
-                                    const isSelected = selectedAssignmentId === ass.id;
-                                    return (
-                                        <div
-                                            key={ass.id}
-                                            onClick={() => handleAssignmentClick(ass)}
-                                            style={{
-                                                padding: '10px 16px',
-                                                cursor: 'pointer',
-                                                backgroundColor: isSelected ? '#fff' : 'transparent',
-                                                borderLeft: isSelected ? '4px solid #2196F3' : '4px solid transparent',
-                                                borderBottom: assIdx < assignmentsBySection['unassigned'].length - 1 ? '1px solid #e0e0e0' : 'none',
-                                                fontWeight: isSelected ? 'bold' : 'normal',
-                                                transition: 'all 0.2s'
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                if (!isSelected) e.currentTarget.style.backgroundColor = '#f5f5f5';
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent';
-                                            }}
-                                        >
-                                            {ass.title}
-                                        </div>
-                                    );
-                                })}
+                    return (
+                        <div style={{ marginBottom: '8px', marginTop: '16px' }}>
+                            <div
+                                onClick={() => toggleSection('unassigned')}
+                                style={{
+                                    backgroundColor: '#ffebee',
+                                    padding: '12px 16px',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    fontWeight: 'bold',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center'
+                                }}
+                            >
+                                <span>⚠️ Unassigned ({unassigned.length})</span>
+                                <span style={{ fontSize: '18px' }}>
+                                    {expandedSections['unassigned'] ? '▼' : '▶'}
+                                </span>
                             </div>
-                        )}
-                    </div>
-                )}
+
+                            {expandedSections['unassigned'] && (
+                                <div style={{
+                                    marginTop: '4px',
+                                    marginLeft: '16px',
+                                    border: '2px solid #ffebee',
+                                    borderRadius: '4px',
+                                    overflow: 'hidden'
+                                }}>
+                                    {pageAssignments.map((ass, assIdx) => {
+                                        const isSelected = selectedAssignmentId === ass.id;
+                                        return (
+                                            <div
+                                                key={ass.id}
+                                                onClick={() => handleAssignmentClick(ass)}
+                                                style={{
+                                                    padding: '10px 16px',
+                                                    cursor: 'pointer',
+                                                    backgroundColor: isSelected ? '#fff' : 'transparent',
+                                                    borderLeft: isSelected ? '4px solid #2196F3' : '4px solid transparent',
+                                                    borderBottom: assIdx < pageAssignments.length - 1 ? '1px solid #e0e0e0' : 'none',
+                                                    fontWeight: isSelected ? 'bold' : 'normal',
+                                                    transition: 'all 0.2s'
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    if (!isSelected) e.currentTarget.style.backgroundColor = '#f5f5f5';
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent';
+                                                }}
+                                            >
+                                                {ass.title}
+                                            </div>
+                                        );
+                                    })}
+
+                                    {totalPages > 1 && (
+                                        <div style={{
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                            padding: '8px 16px',
+                                            borderTop: '1px solid #e0e0e0',
+                                            backgroundColor: '#ffebee'
+                                        }}>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); setSectionPage('unassigned', page - 1); }}
+                                                disabled={page === 0}
+                                                style={{
+                                                    padding: '4px 12px',
+                                                    cursor: page === 0 ? 'default' : 'pointer',
+                                                    opacity: page === 0 ? 0.4 : 1
+                                                }}
+                                            >
+                                                ← Prev
+                                            </button>
+                                            <span style={{ fontSize: '13px', color: '#555' }}>
+                                                Page {page + 1} of {totalPages}
+                                            </span>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); setSectionPage('unassigned', page + 1); }}
+                                                disabled={page >= totalPages - 1}
+                                                style={{
+                                                    padding: '4px 12px',
+                                                    cursor: page >= totalPages - 1 ? 'default' : 'pointer',
+                                                    opacity: page >= totalPages - 1 ? 0.4 : 1
+                                                }}
+                                            >
+                                                Next →
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    );
+                })()}
             </div>
 
         </div>
