@@ -1,11 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { formatDate, isPastDue } from '../../../utils/dateUtils';
+
+const PAGE_SIZE = 10;
 
 const StudentAssignmentMenu = ({
     setSelectedAssignmentId,
     selectedAssignmentId,
     assignments
 }) => {
+    const [page, setPage] = useState(0);
+
+    const sorted = [...assignments].sort((a, b) => new Date(b.dueDate) - new Date(a.dueDate)); //bubble sort, most recent due date first
+    const totalPages = Math.ceil(sorted.length / PAGE_SIZE);
+    const pageAssignments = sorted.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
     return (<>
         <div style={{
@@ -28,7 +35,7 @@ const StudentAssignmentMenu = ({
                     Assignment:
                 </label>
                 <select
-                    value={selectedAssignmentId} //value that gets passed is not the text but assignment id
+                    value={selectedAssignmentId}
                     onChange={e => {
                         const value = e.target.value
                         setSelectedAssignmentId(Number(value) || -1);
@@ -42,9 +49,8 @@ const StudentAssignmentMenu = ({
                     }}
                 >
                     <option value="">Select an Assignment</option>
-                    {/* filter by assignmentType */}
-                    {assignments.map(ass => (
-                        <option key={ass.id} 
+                    {pageAssignments.map(ass => (
+                        <option key={ass.id}
                                 value={ass.id}
                                 style={{ color: isPastDue(ass.dueDate) ? 'red' : 'black' }}
                         >
@@ -52,6 +58,41 @@ const StudentAssignmentMenu = ({
                         </option>
                     ))}
                 </select>
+
+                {totalPages > 1 && (
+                    <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginTop: '8px'
+                    }}>
+                        <button
+                            onClick={() => setPage(p => p - 1)}
+                            disabled={page === 0}
+                            style={{
+                                padding: '4px 12px',
+                                cursor: page === 0 ? 'default' : 'pointer',
+                                opacity: page === 0 ? 0.4 : 1
+                            }}
+                        >
+                            ← Prev
+                        </button>
+                        <span style={{ fontSize: '13px', color: '#555' }}>
+                            Page {page + 1} of {totalPages}
+                        </span>
+                        <button
+                            onClick={() => setPage(p => p + 1)}
+                            disabled={page >= totalPages - 1}
+                            style={{
+                                padding: '4px 12px',
+                                cursor: page >= totalPages - 1 ? 'default' : 'pointer',
+                                opacity: page >= totalPages - 1 ? 0.4 : 1
+                            }}
+                        >
+                            Next →
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     </>);

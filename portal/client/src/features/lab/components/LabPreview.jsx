@@ -488,11 +488,13 @@ function LabPreview({
                 )}
 
 
-                {/* //read only is for admin viewing in submission list */}
-                {!readOnly && (
+                {/* 
+                    CURRENTLY DISABLED BECAUSE STUDENTS SHOULD USE THE GRADE BUTTON ONLY
+                //read only is for admin viewing in submission list */}
+                {/* {!readOnly && (
                     <>
                         {/* BUTTON SUBMIT RESPONSE */}
-                        < button
+                        {/* < button
                             onClick={submitResponses}
                             disabled={isSubmitting}
                             className={`bg-purple-600 text-white px-4 py-2 rounded mt-4 flex items-center ${isSubmitting ? 'opacity-75 cursor-not-allowed' : ''
@@ -509,15 +511,15 @@ function LabPreview({
                             ) : (
                                 'Submit'
                             )}
-                        </button>
-                    </>
-                )}
+                        </button> */}
+                    {/* </> */}
+                {/* )} */}
 
-                {submitError && (
+                {/* {submitError && (
                     <div className="mt-4 p-4 border rounded bg-red-50 text-red-700">
                         {submitError}
                     </div>
-                )}
+                )} */}
 
                 {/*OUTPUT FINAL SCORE */}
                 {Object.keys(gradedResults).length > 0 && (
