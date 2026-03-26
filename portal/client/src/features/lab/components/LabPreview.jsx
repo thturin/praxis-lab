@@ -31,8 +31,8 @@ function LabPreview({
 
     const [session, setSession] = useState(createSession(title, username, userId, labId));
     // const [sessionLoaded, setSessionLoaded] = useState(false);
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [submitError, setSubmitError] = useState('');
+    //const [isSubmitting, setIsSubmitting] = useState(false);
+    //const [submitError, setSubmitError] = useState('');
 
     const exportSessionToFile = () => {
         const payload = {
@@ -359,80 +359,80 @@ function LabPreview({
 
     //if student clicks submit, we want to grade all questions, 
     // even those that haven't been graded yet, and then calculate final score and update session and submission with final score.
-    const submitResponses = async () => {
-        setIsSubmitting(true);
-        setSubmitError('');
+    // const submitResponses = async () => {
+    //     setIsSubmitting(true);
+    //     setSubmitError('');
 
-        let newGradedResults = { ...session.gradedResults };
-        for (const [questionId, userAnswer] of Object.entries(responses)) {
-            try {
-                const result = await gradeSingleQuestion(questionId, userAnswer);
-                if (!result) continue;
-                newGradedResults = { ...newGradedResults, [questionId]: result };
-            } catch (err) {
-                console.error("Error grading in LabPreview [LabPreview.jsx]", err.message);
-            }
-        } //END OF FOR LOOP
+    //     let newGradedResults = { ...session.gradedResults };
+    //     for (const [questionId, userAnswer] of Object.entries(responses)) {
+    //         try {
+    //             const result = await gradeSingleQuestion(questionId, userAnswer);
+    //             if (!result) continue;
+    //             newGradedResults = { ...newGradedResults, [questionId]: result };
+    //         } catch (err) {
+    //             console.error("Error grading in LabPreview [LabPreview.jsx]", err.message);
+    //         }
+    //     } //END OF FOR LOOP
 
-        //FOR QUESTIONS THAT WERE LEFT BLANK, CREATE A NEW OBJECT IN GRADEDRESULTS 
-        //WITH SCORE 0 AND NO RESPONSE
-        allQuestions.forEach(q => {
-            //if new gradedResults does not contain this id,
-            if (!newGradedResults[q.id] && q.isScored) {
-                newGradedResults[q.id] = {
-                    score: 0,
-                    feedback: "left blank"
-                }
-            }
-        });
-        //CALCULATE FINAL SCORE
-        let newFinalScorePercent = 0;
+    //     //FOR QUESTIONS THAT WERE LEFT BLANK, CREATE A NEW OBJECT IN GRADEDRESULTS 
+    //     //WITH SCORE 0 AND NO RESPONSE
+    //     allQuestions.forEach(q => {
+    //         //if new gradedResults does not contain this id,
+    //         if (!newGradedResults[q.id] && q.isScored) {
+    //             newGradedResults[q.id] = {
+    //                 score: 0,
+    //                 feedback: "left blank"
+    //             }
+    //         }
+    //     });
+    //     //CALCULATE FINAL SCORE
+    //     let newFinalScorePercent = 0;
 
-        try {
-            const response = await axios.post(`${process.env.REACT_APP_API_LAB_HOST}/grade/calculate-score`, {
-                gradedResults: newGradedResults, //use variable instead
-                labId,
-                userId
-            });
+    //     try {
+    //         const response = await axios.post(`${process.env.REACT_APP_API_LAB_HOST}/grade/calculate-score`, {
+    //             gradedResults: newGradedResults, //use variable instead
+    //             labId,
+    //             userId
+    //         });
 
-            //when upserting submission, use this value for percent insteado using session because 
-            //setSession is asynchronous so doesn't always update before upserting to lab 
-            newFinalScorePercent = response.data.session.finalScore.percent;
+    //         //when upserting submission, use this value for percent insteado using session because 
+    //         //setSession is asynchronous so doesn't always update before upserting to lab 
+    //         newFinalScorePercent = response.data.session.finalScore.percent;
 
-            //update session with new graded results and final score
-            setSession(prev => ({
-                ...prev,
-                gradedResults: newGradedResults,
-                finalScore: response.data.session.finalScore
-            }));
+    //         //update session with new graded results and final score
+    //         setSession(prev => ({
+    //             ...prev,
+    //             gradedResults: newGradedResults,
+    //             finalScore: response.data.session.finalScore
+    //         }));
 
-            //create a lab submission or update it with final score and due date for late penalty calculation in backend. 
-            //only do this if calculate-score is successful
-            if (!isAdmin) {
-                try {
-                    const response = await axios.post(`${process.env.REACT_APP_API_HOST}/submissions/upsertLab`, {
-                        assignmentId,
-                        userId,
-                        dueDate: selectedAssignmentDueDate,
-                        score: newFinalScorePercent
+    //         //create a lab submission or update it with final score and due date for late penalty calculation in backend. 
+    //         //only do this if calculate-score is successful
+    //         if (!isAdmin) {
+    //             try {
+    //                 const response = await axios.post(`${process.env.REACT_APP_API_HOST}/submissions/upsertLab`, {
+    //                     assignmentId,
+    //                     userId,
+    //                     dueDate: selectedAssignmentDueDate,
+    //                     score: newFinalScorePercent
                     
-                    });
-                    //SESSION SCORE DOES NOT GET UPDATED with late penalty
-                    onUpdateSubmission(response.data);
-                } catch (err) {
-                    console.error('error upsertingLab ', err);
-                    setSubmitError('Submission failed to save. Please try submitting again.');
-                } finally {
-                    setIsSubmitting(false); //stop loading regardless of success/failure
-                }
-            }
-        } catch (err) {
-            console.error('error calculating final score', err);
-            setSubmitError('Failed to calculate score. Please try submitting again.');
-        } finally {
-            setIsSubmitting(false);
-        }
-    }
+    //                 });
+    //                 //SESSION SCORE DOES NOT GET UPDATED with late penalty
+    //                 onUpdateSubmission(response.data);
+    //             } catch (err) {
+    //                 console.error('error upsertingLab ', err);
+    //                 setSubmitError('Submission failed to save. Please try submitting again.');
+    //             } finally {
+    //                 setIsSubmitting(false); //stop loading regardless of success/failure
+    //             }
+    //         }
+    //     } catch (err) {
+    //         console.error('error calculating final score', err);
+    //         setSubmitError('Failed to calculate score. Please try submitting again.');
+    //     } finally {
+    //         setIsSubmitting(false);
+    //     }
+    // }
 
     return (
         <>
