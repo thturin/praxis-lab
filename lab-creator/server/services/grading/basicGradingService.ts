@@ -1,13 +1,13 @@
-const { callLLM } = require('../llm/llmClient');
-import { buildBasicGradingPrompt } from '../prompts/basicPrompts';
-import { prepareGradingInputs } from '../../utils/prepareGradingInputs';
+import { evaluateWithLLM, matchKeyPoints, matchPseudoQuestion } from './textGradingService';
+import { generateFusionFeedback } from './feedbackService';
 
 export interface GradeBasicQuestionParams {
   userAnswer: string;
-  aiPrompt: string;
+  answerKey: string;
   question: string;
+  studentImageTexts?: string[];
   adminImageText?: string;
-  studentImageText?: string[];
+  adminKeyImageText?: string;
 }
 
 export interface GradeBasicQuestionResult {
@@ -15,53 +15,42 @@ export interface GradeBasicQuestionResult {
   feedback: string;
 }
 
+const BASIC_WEIGHTS = { lge: 0.45, kpm: 0.40, pqm: 0.15 };
+const BASIC_PASS_THRESHOLD = 0.5;
 
-//studentImageTexts == studentImageAnalysis.text-extraction
-export const gradeBasicQuestion = async ({ userAnswer, aiPrompt, question, adminImageText, studentImageText }: GradeBasicQuestionParams): Promise<GradeBasicQuestionResult> => {
-  const { effectiveAnswer, effectiveQuestion } = prepareGradingInputs({ userAnswer, question, studentImageText, adminImageText });
-  if (!effectiveAnswer.trim()) return { score: 0, feedback: 'Response is empty for basic question' };
-  if (!aiPrompt?.trim()) return { score: 1, feedback: 'No grading directions provided; awarding full credit' };
+export const gradeBasicQuestion = async ({ userAnswer, answerKey, question, studentImageTexts, adminImageText, adminKeyImageText }: GradeBasicQuestionParams): Promise<GradeBasicQuestionResult> => {
+  const [lgeResult, kpmResult, pqmResult] = await Promise.all([
+    evaluateWithLLM({ userAnswer, answerKey, question, questionType: 'basic', AIPrompt: '', timeoutMs: 20000 }),
+    matchKeyPoints(question, userAnswer, answerKey),
+    matchPseudoQuestion(question, userAnswer),
+  ]);
 
-  const prompt = buildBasicGradingPrompt({
-    question: effectiveQuestion,
-    aiPrompt,
-    studentAnswer: effectiveAnswer,
-  });
-  let raw;
-
-  try {
-    raw = await callLLM({
-      provider: 'deepseek',
-      messages: [
-        { role: 'system', content: 'You are an empathetic grading assistant.' },
-        { role: 'user', content: prompt },
-      ],
-      temperature: 0.2,
-      maxTokens: 500,
-      tools: [{
-        type: 'function', function: {
-          name: 'grade_response',
-          description: 'Grade the student response as pass or fail based on the grading directions',
-          parameters: {
-            type: 'object',
-            properties: {
-              score: { type: 'integer', description: '1 if pass, 0 if fail' },
-              feedback: { type: 'string', description: 'Brief feedback stating what the student did or did not provide, written in markdown.' }
-            },
-            required: ['score', 'feedback']
-          }
-        }
-      }],
-      timeout: 20000,
-    });
-
-  }catch(err){
-    console.error('Error grading basic question:', err.response?.data || err.message);
-    return { score: 0, feedback: 'Error during grading. Please review your answer and try again.' };
+  if (!lgeResult.success) {
+    throw new Error(`LGE failed — ${lgeResult.error || 'unknown error'}`);
   }
 
+  const lgeScore = lgeResult.score ?? 0;
+  let feedback = lgeResult.feedback || '';
 
+  const fusedScore = (
+    BASIC_WEIGHTS.lge * lgeScore +
+    BASIC_WEIGHTS.kpm * kpmResult.similarity +
+    BASIC_WEIGHTS.pqm * pqmResult.similarity
+  );
 
-  const parsed = JSON.parse(raw);
-  return { score: parsed.score, feedback: parsed.feedback };
+  const score = fusedScore >= BASIC_PASS_THRESHOLD ? 1 : 0;
+
+  console.log('Basic grading fusion:', {
+    lge: lgeScore,
+    kpm: kpmResult.similarity.toFixed(3),
+    pqm: pqmResult.similarity.toFixed(3),
+    fusedScore: fusedScore.toFixed(3),
+    score: score ? 'PASS' : 'FAIL',
+  });
+
+  if (lgeScore === 0 && score === 1) {
+    feedback = await generateFusionFeedback({ userAnswer, answerKey, question, fusedScore, timeoutMs: 20000 });
+  }
+
+  return { score, feedback };
 };

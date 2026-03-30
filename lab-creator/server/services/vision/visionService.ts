@@ -209,18 +209,16 @@ Rules for fingerprint strings:
 - Use active verbs: drives, triggers, feeds, inverts, enables, connects_to
 - Use normalized functional types only — drop all student-assigned IDs and labels (IC1, U1, G1, FF1 → use functional position like first_dff, second_nand_gate)
 - Flow direction is always source → destination
-- The final string must describe the overall topology pattern
 
 Examples (circuit):
 - "2Hz_clock_drives_first_dff"
 - "first_dff_inverted_Q_triggers_second_dff_clock"
-- "logic_topology_is_asynchronous_4bit_ripple_counter"
+
 
 Examples (block program):
 - "green_flag_event_triggers_forever_loop"
 - "forever_loop_drives_move_10_steps"
-- "forever_loop_drives_edge_bounce_check"
-- "logic_topology_is_event_driven_continuous_motion_script"`
+- "forever_loop_drives_edge_bounce_check"`
       },
       {
         role: 'user',
@@ -241,7 +239,7 @@ Examples (block program):
               topology_fingerprint: {
                 type: 'array',
                 items: { type: 'string' },
-                description: 'List of snake_case relational strings describing signal/control flow. Final entry must describe the overall topology pattern.'
+                description: 'List of snake_case relational strings describing signal/control flow.'
               },
               analytical_summary: {
                 type: 'object',

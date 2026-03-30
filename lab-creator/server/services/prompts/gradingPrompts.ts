@@ -23,6 +23,7 @@ interface BuildCosineFeedbackPromptParams {
   answerKey: string;
   question: string;
   similarity: number;
+  questionType?: string;
 }
 
 interface BuildKeyPointsExtractionPromptParams {
@@ -54,15 +55,33 @@ export const buildLGEPrompt = ({ userAnswer, answerKey, question, questionType, 
     };
 
             // Prompt for generating constructive feedback after cosine similarity verification
-export const buildCosineFeedbackPrompt = ({ userAnswer, answerKey, question, similarity }: BuildCosineFeedbackPromptParams): string => {
-  return `You are an empathetic grading assistant. This answer was verified as semantically correct (similarity: ${similarity.toFixed(3)}).
+export const buildCosineFeedbackPrompt = ({ userAnswer, answerKey, question, similarity, questionType }: BuildCosineFeedbackPromptParams): string => {
+
+  if (questionType === 'image-analysis') {
+    return `You are an empathetic grading assistant. The student submitted a diagram which was analyzed and compared to the answer key (similarity: ${similarity.toFixed(3)}).
+      QUESTION:
+      ${question}
+      ANSWER KEY TOPOLOGY:
+      ${answerKey}
+      STUDENT'S DIAGRAM TOPOLOGY:
+      ${userAnswer}
+      Identify the type of circuit or block diagram from the topologies (e.g. ripple counter, shift register, state machine, event-driven script).'
+       Give the student feedback about their diagram — what they got right. 
+       Do not mention the cosine similarity score in the feedback. Do not compare the student's 
+      answer to the reference answer directly or quote it — focus on the student's demonstrated understanding and how they can continue to improve
+       Use "you" and "your diagram". Describe connections and components in plain terms, not as raw topology strings.`;
+  } else {
+    return `You are an empathetic grading assistant. This answer was verified as semantically correct (similarity: ${similarity.toFixed(3)}).
       QUESTION:
       ${question}
       REFERENCE ANSWER:
       ${answerKey}
       STUDENT'S ANSWER:
       ${userAnswer}
-      Provide concise, encouraging feedback. Acknowledge correct understanding, note strengths, and suggest minor improvements if any. Use "you" not "the student".`;
+      Provide concise, encouraging feedback. Acknowledge correct understanding, note strengths, and suggest minor improvements 
+      if any. Use "you" not "the student". Do not mention the cosine similarity score in the feedback. Do not compare the student's 
+      answer to the reference answer directly or quote it — focus on the student's demonstrated understanding and how they can continue to improve.`;
+  }
 };
 
 

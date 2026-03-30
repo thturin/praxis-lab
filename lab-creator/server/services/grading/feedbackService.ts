@@ -6,21 +6,25 @@ interface GenerateFusionFeedbackParams {
   answerKey: string;
   question: string;
   fusedScore: number;
+  questionType?: string;
   timeoutMs?: number;
 }
 
 // Called when LGE fails but fusion score passes —
 // generates feedback explaining why the answer is considered correct
 // based on semantic similarity rather than LGE judgement.
+// Also called for image-analysis questions where feedback is always fusion-based.
 export const generateFusionFeedback = async ({
   userAnswer,
   answerKey,
   question,
   fusedScore,
+  questionType,
   timeoutMs = 20000,
 }: GenerateFusionFeedbackParams): Promise<string> => {
   try {
-    const feedbackPrompt = buildCosineFeedbackPrompt({ userAnswer, answerKey, question, similarity: fusedScore });
+    const feedbackPrompt = buildCosineFeedbackPrompt({ userAnswer, answerKey, question, similarity: fusedScore, questionType });
+
     const raw = await callLLM({
       messages: [
         { role: 'system', content: 'You are an empathetic grading assistant.' },

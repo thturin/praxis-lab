@@ -4,6 +4,7 @@ const { generateJUnitTests, gradeJavaQuestionService } = require('../services/gr
 const { gradeTextQuestion } = require('../services/grading/textGradingService');
 const { gradeImageAnalysisWithFusion } = require('../services/grading/imageGradingService');
 const { gradeMultipleChoiceQuestion } = require('../services/grading/multipleChoiceGradingService');
+const { gradeCustomPromptQuestion } = require('../services/grading/customPromptGradingService');
 const { gradeBasicQuestion } = require('../services/grading/basicGradingService');
 const { computeFinalScore } = require('../services/scoring/scoringService');
 const { parseCodeFromHtml, parseTextFromHtml } = require('../utils/parseHtml');
@@ -71,12 +72,14 @@ export const gradeQuestion = async (req: Request, res: Response) => {
             result = await gradeMultipleChoiceQuestion({ userAnswer, answerKey, question, adminImageText });
         //BASIC QUESTION .."IS IT THERE" OR "HOW MANY ARE THERE" TYPE QUESTIONS WHERE AI PROMPT DEFINES GRADING CRITERIA
         } else if (questionType === 'basic') {
-            result = await gradeBasicQuestion({ userAnswer, aiPrompt: AIPrompt, question, adminImageText, studentImageText: studentImageAnalysis ? [studentImageAnalysis.text_extraction] : undefined });
+            result = await gradeBasicQuestion({ userAnswer, answerKey, question, studentImageTexts: studentImageAnalysis ? [studentImageAnalysis.text_extraction] : undefined, adminImageText, adminKeyImageText });
+        } else if (questionType === 'custom-prompt') {
+            result = await gradeCustomPromptQuestion({ userAnswer, aiPrompt: AIPrompt, answerKey, question, adminImageText, studentImageText: studentImageAnalysis ? [studentImageAnalysis.text_extraction] : undefined });
         //IMAGE ANALYSIS QUESTIONS WITH BOTH STUDENT AND ADMIN ANALYSIS AVAILABLE — USE IMAGE FUSION GRADING
         } else if (questionType === 'image-analysis') {
             if (!adminImageAnalysis) return res.status(400).json({ error: 'Admin answer key does not contain an image analysis' });
             if (!studentImageAnalysis) return res.status(400).json({ error: 'Student image analysis not found' });
-            result = await gradeImageAnalysisWithFusion({ studentAnalysis: studentImageAnalysis, adminAnalysis: adminImageAnalysis, question });
+            result = await gradeImageAnalysisWithFusion({ studentAnalysis: studentImageAnalysis, adminAnalysis: adminImageAnalysis, question: parseTextFromHtml(question) });
         } else {
             // Text grading — use text_extraction from studentImageAnalysis if available
             const effectiveStudentImageTexts = studentImageAnalysis ? [studentImageAnalysis.text_extraction] : undefined;

@@ -207,8 +207,8 @@ function LabPreview({
 
         if (!question || !type) return null;
 
-        // basic questions use aiPrompt as grading criteria, not answerKey — skip this check for them
-        if (!answerKey && type !== 'basic' && type !== 'multiple-choice') {
+        // custom-prompt questions use aiPrompt as grading criteria, not answerKey — skip this check for them
+        if (!answerKey && type !== 'custom-prompt') {
             return { score: 1, feedback: 'Auto-awarded: no answer key provided' };
         }
 

@@ -148,8 +148,8 @@ function QuestionEditor({ q, onQuestionChange, onQuestionDelete, level = 0, disp
                                     )}
                                 </div>
 
-                                {/* Grading Directions - Only for basic */}
-                                {q.type === 'basic' && (
+                                {/* Grading Directions - Only for custom-prompt */}
+                                {q.type === 'custom-prompt' && (
                                     <div className="mb-2 border border-yellow-200 bg-yellow-50 rounded-md overflow-hidden">
                                         <div className="px-3 py-2">
                                             <span className="font-semibold text-sm text-yellow-800 block mb-1">Grading Directions</span>
@@ -251,11 +251,11 @@ function QuestionEditor({ q, onQuestionChange, onQuestionDelete, level = 0, disp
                             //show button to generate test code only if type is code
                             return update("type", e.target.value)}}
                     >
-                        <option value="short">Short Answer</option>
-                        <option value="textarea">Paragraph</option>
+                        <option value="text">Paragraph</option>
                         <option value="code">Java</option>
                         <option value="multiple-choice">Multiple Choice</option>
                         <option value="basic">Basic</option>
+                        <option value="custom-prompt">Custom Prompt</option>
                         <option value="image-analysis">Image Analysis</option>
                     </select>
                     {/* ADD SUB QUESTION BUTTON */}
