@@ -126,7 +126,8 @@ function LabBuilder({ blocks, setBlocks,
                 ...block,
                 prompt: await inlineImagesAsDataUrls(block.prompt),
                 explanation: await inlineImagesAsDataUrls(block.explanation),
-                subQuestions: updatedSubQuestions
+                subQuestions: updatedSubQuestions,
+                key: updatedSubQuestions.length > 0 ? block.key : await inlineImagesAsDataUrls(block.key)
             };
         }
 
