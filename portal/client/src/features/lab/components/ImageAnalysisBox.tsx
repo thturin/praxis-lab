@@ -60,14 +60,38 @@ function ImageAnalysisBox({ htmlContent, imageAnalysis, onChange }: ImageAnalysi
             <div className="px-3 pb-3">
                 {error && <p className="text-red-600 text-sm mb-2">{error}</p>}
                 {imageAnalysis ? (
-                    <textarea
-                        className="w-full border p-2 rounded text-sm font-mono"
-                        value={JSON.stringify(imageAnalysis, null, 2)}
-                        onChange={(e) => {
-                            try { onChange(JSON.parse(e.target.value)); } catch {}
-                        }}
-                        rows={10}
-                    />
+                    <div className="space-y-3">
+                        {/* Topology fingerprint — readable list */}
+                        {imageAnalysis.topology_fingerprint?.length > 0 && (
+                            <div>
+                                <p className="text-xs font-semibold text-teal-700 mb-1">Topology</p>
+                                <ul className="text-xs text-gray-700 space-y-0.5 pl-2">
+                                    {imageAnalysis.topology_fingerprint.map((line: string, i: number) => (
+                                        <li key={i} className="font-mono">{line}</li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+                        {/* Analytical summary */}
+                        {imageAnalysis.analytical_summary && (
+                            <div className="text-xs text-gray-600 space-y-0.5">
+                                <p><span className="font-semibold">Function:</span> {imageAnalysis.analytical_summary.primary_function}</p>
+                                <p><span className="font-semibold">Pattern:</span> {imageAnalysis.analytical_summary.identified_pattern}</p>
+                            </div>
+                        )}
+                        {/* Raw JSON — editable for manual correction */}
+                        <details className="text-xs">
+                            <summary className="cursor-pointer text-teal-700 font-semibold">Edit raw JSON</summary>
+                            <textarea
+                                className="w-full border p-2 rounded text-sm font-mono mt-1"
+                                value={JSON.stringify(imageAnalysis, null, 2)}
+                                onChange={(e) => {
+                                    try { onChange(JSON.parse(e.target.value)); } catch {}
+                                }}
+                                rows={10}
+                            />
+                        </details>
+                    </div>
                 ) : (
                     <p className="text-teal-600 text-sm italic">Not yet analyzed. Click Analyze Image to generate structured analysis.</p>
                 )}
