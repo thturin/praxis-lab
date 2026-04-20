@@ -328,9 +328,8 @@ function LabPreview({
                 finalScore: scoreResponse.data.session.finalScore
             }));
 
-            //if a student is submitting, then create or update an actual submission
-            //admins do not have submissions
             if (!isAdmin) {
+                // Student grading: create/update their own submission
                 try {
                     const subResponse = await axios.post(`${process.env.REACT_APP_API_HOST}/submissions/upsertLab`, {
                         assignmentId,
@@ -341,6 +340,19 @@ function LabPreview({
                     onUpdateSubmission(subResponse.data);
                 } catch (err) {
                     console.error('error upsertingLab from handleGradeSingle', err);
+                }
+            } else if (onUpdateSubmission) { //ADMIN SHOULD BE ABLE TO UPDATE STUDENT SCORE IN SUBMISSION LIST VIEW
+                // Admin reviewing a student submission: update the student's submission record
+                try {
+                    await axios.post(`${process.env.REACT_APP_API_HOST}/submissions/upsertLab`, {
+                        assignmentId,
+                        userId,//user id is set in admin dashboard when admin clicks on a submission to review
+                        dueDate: selectedAssignmentDueDate,
+                        score: newFinalScorePercent
+                    });
+                    onUpdateSubmission(newFinalScorePercent);
+                } catch (err) {
+                    console.error('error upsertingLab from handleGradeSingle (admin review)', err);
                 }
             }
         } catch (err) {
