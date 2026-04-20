@@ -16,7 +16,7 @@ export interface GradeBasicQuestionResult {
 }
 
 const BASIC_WEIGHTS = { kpm: 0.65, pqm: 0.35 };
-const BASIC_PASS_THRESHOLD = 0.65;
+const BASIC_PASS_THRESHOLD = 0.6;
 
 // This function grades a basic question by combining the results of key point matching and pseudo-question matching.
 // // It then generates feedback based on the fused score.
