@@ -466,7 +466,8 @@ function LabPreview({
                                     isAdmin={isAdmin}
                                     sessionId={session.id}
                                     onScoreUpdated={handleScoreOverride}
-                                    onGradeSingle={readOnly ? undefined : handleGradeSingle}
+                                    //onGradeSingle={readOnly ? undefined : handleGradeSingle}
+                                    onGradeSingle={handleGradeSingle}
                                     gradingQuestionIds={gradingQuestionIds}
                                     gradingErrors={gradingErrors}
                                 />
