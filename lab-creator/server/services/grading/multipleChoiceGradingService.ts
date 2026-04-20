@@ -44,7 +44,7 @@ export const gradeMultipleChoiceQuestion = async ({ userAnswer, answerKey, quest
       { role: 'user', content: prompt },
     ],
     temperature: 0.2,
-    maxTokens: 500,
+    maxTokens: 1000,
     tools: [{ type: 'function', function: {
       name: 'grade_response',
       description: 'Return the score and feedback for a multiple choice answer',
@@ -57,7 +57,7 @@ export const gradeMultipleChoiceQuestion = async ({ userAnswer, answerKey, quest
         required: ['score', 'feedback']
       }
     }}],
-    timeout: 15000,
+    timeout: 30000,
   });
 
  
