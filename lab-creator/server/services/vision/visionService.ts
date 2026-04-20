@@ -278,6 +278,7 @@ export async function analyzeImage(base64Data: string, mimeType: string): Promis
   }
   let topologyResult;
   try{
+    //console.log('<33333333Starting topology analysis with intermediate result:', intermediate);
     topologyResult= await createTopology(intermediate);
     console.log('+++++++++++++++++++++++++++++++++++++++++Topology analysis result+++++++++++++++++++++++++++++++++++++++\n', topologyResult);
   }catch(err){

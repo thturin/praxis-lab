@@ -41,7 +41,7 @@ interface CallEmbeddingOptions {
   input: [string, string];
 }
 
-async function callLLM({ provider = 'deepseek', model, messages, temperature = 0.2, maxTokens = 500, responseFormat, tools, timeout = 20000 }: CallLLMOptions): Promise<string> {
+async function callLLM({ provider = 'deepseek', model, messages, temperature = 0.2, maxTokens = 500, responseFormat, tools, timeout = 40000 }: CallLLMOptions): Promise<string> {
   const config = PROVIDERS[provider];
   if (!config) throw new Error(`Unknown LLM provider: ${provider}`);
 
@@ -60,25 +60,28 @@ async function callLLM({ provider = 'deepseek', model, messages, temperature = 0
     body.tool_choice = { type: 'function', function: { name: tools[0].function.name } };
   }
 
-  const response = await axios.post(config.url, body, {
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json'
-    },
-    timeout,
-  });
+  try {
+    const response = await axios.post(config.url, body, {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      timeout,
+    });
 
+    // If tools were used, extract the function call arguments.
+    // DeepSeek occasionally ignores tool_choice and puts the response in message.content instead.
+    if (tools) {
+      const toolArgs = response.data?.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
+      const content = response.data?.choices?.[0]?.message?.content;
+      return toolArgs || content || '';
+    }
 
-
-  // If tools were used, extract the function call arguments.
-  // DeepSeek occasionally ignores tool_choice and puts the response in message.content instead.
-  if (tools) {
-    const toolArgs = response.data?.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
-    const content = response.data?.choices?.[0]?.message?.content;
-    return toolArgs || content || '';
+    return response.data?.choices?.[0]?.message?.content || '';
+  } catch (err) {
+    console.error('Error calling LLM:', err.response?.data ?? err.message);
+    throw err;
   }
-
-  return response.data?.choices?.[0]?.message?.content || '';
 }
 
 // Normal case (tool_calls present):                                                                                                                                
