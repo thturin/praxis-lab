@@ -217,7 +217,9 @@ export const evaluateWithLLM = async ({ userAnswer, answerKey, question, questio
 };
 
 //=============ORCHESTRATOR: GRADE NON-CODING QUESTIONS =============
-const FUSION_WEIGHTS = { lge: 0.35, kpm: 0.30, tsm: 0.20, pqm: 0.15 };
+// Weights updated: LGE reduced (binary 0/1 score has outsized negative impact on correct answers when LLM false-negatives)
+// KPM raised (most reliable semantic signal). PQM reduced (weakest signal, especially for code/implementation questions).
+const FUSION_WEIGHTS = { lge: 0.20, kpm: 0.45, tsm: 0.25, pqm: 0.10 };
 const FUSION_PASS_THRESHOLD = 0.5;
 
 export const gradeWithFusion = async ({ userAnswer, answerKey, question, questionType, AIPrompt, timeoutMs = 20000 }: GradeParams): Promise<GradingResult> => {
