@@ -41,38 +41,33 @@ export async function extractImage(base64Data: string, mimeType: string): Promis
 
   const prompt = `Extract and transcribe all text from this image exactly as written. Return only the transcribed text, nothing else.`;
 
-  const response = await axios.post(
-    'https://openrouter.ai/api/v1/chat/completions',
-    {
-      model: 'google/gemini-2.0-flash-lite-001',
-      messages: [
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: prompt },
-            {
-              type: 'image_url',
-              image_url: {
-                url: `data:${mimeType};base64,${base64Data}`,
-              },
-            },
-          ],
-        },
-      ],
-      max_tokens: 1000,
-      temperature: 0.1,
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
+  const body = {
+    model: 'google/gemini-3.1-flash-lite-preview',
+    messages: [
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: prompt },
+          { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64Data}` } },
+        ],
       },
-      timeout: 30000,
-    }
-  );
+    ],
+    max_tokens: 1000,
+    temperature: 0.1,
+  };
+  const axiosConfig = {
+    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    timeout: 60000,
+  };
 
-  const text = response.data?.choices?.[0]?.message?.content || '';
-  return { text };
+  try {
+    const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', body, axiosConfig);
+    const text = response.data?.choices?.[0]?.message?.content || '';
+    return { text };
+  } catch (err: any) {
+    console.error('extractImage failed:', err.response?.data ?? err.message);
+    throw err;
+  }
 }
 
 /**

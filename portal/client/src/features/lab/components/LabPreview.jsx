@@ -1,5 +1,5 @@
 import axios from "axios";
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { createSession } from '../models/session';
 import MaterialBlock from './MaterialBlock';
 import QuestionBlock from './QuestionBlock';
@@ -30,6 +30,8 @@ function LabPreview({
     const isAdmin = mode === 'admin';
 
     const [session, setSession] = useState(createSession(title, username, userId, labId));
+    const [saveStatus, setSaveStatus] = useState('idle'); // 'idle' | 'saving' | 'saved' | 'error'
+    const sessionRef = useRef(session);
     // const [sessionLoaded, setSessionLoaded] = useState(false);
     //const [isSubmitting, setIsSubmitting] = useState(false);
     //const [submitError, setSubmitError] = useState('');
@@ -127,15 +129,22 @@ function LabPreview({
     }, [labId, userId, username, title]);
 
 
+    useEffect(() => {
+        sessionRef.current = session;
+    }, [session]);
+
     const saveSession = useCallback(async () => {
-        //if (!session || !title || !userId || !labId || !sessionLoaded) return;
-        console.log('save session...');
+        setSaveStatus('saving');
         try {
-            await axios.post(`${process.env.REACT_APP_API_LAB_HOST}/session/save-session`, { session });
+            await axios.post(`${process.env.REACT_APP_API_LAB_HOST}/session/save-session`, { session: sessionRef.current });
+            setSaveStatus('saved');
+            setTimeout(() => setSaveStatus('idle'), 2500);
         } catch (err) {
             console.error('Error saving session. Check backend', err);
+            setSaveStatus('error');
+            setTimeout(() => setSaveStatus('idle'), 3000);
         }
-    }, [session]);
+    }, []);
 
     //LOAD SESSION and LAB
     useEffect(() => {
@@ -150,12 +159,10 @@ function LabPreview({
         loadSession();
     }, [labId, userId, username, reloadKey, loadSession]);
 
-    // AUTO SAVE SESSION - save 
-    useEffect(() => { //useeffect cannot be async
-        //console.log('Auto-saving session...');
-        saveSession();
-        const timeoutId = setTimeout(saveSession, 1000); //add 1 second delay 
-        return () => clearTimeout(timeoutId);
+    // AUTO SAVE SESSION - every 60 seconds, independent of response changes
+    useEffect(() => {
+        const intervalId = setInterval(saveSession, 60000);
+        return () => clearInterval(intervalId);
     }, [saveSession]);
 
 
@@ -488,8 +495,27 @@ function LabPreview({
                     </div>
                 ))}
 
-                {/* Export session for local testing */}
+                {/* Manual save button — student mode only */}
+                {!isAdmin && (
+                    <button
+                        onClick={saveSession}
+                        disabled={saveStatus === 'saving'}
+                        className={`px-4 py-2 rounded mt-4 mr-3 text-white ${
+                            saveStatus === 'saving' ? 'bg-gray-400 cursor-not-allowed' :
+                            saveStatus === 'saved'  ? 'bg-green-600' :
+                            saveStatus === 'error'  ? 'bg-red-600' :
+                            'bg-slate-700'
+                        }`}
+                        type="button"
+                    >
+                        {saveStatus === 'saving' ? 'Saving...' :
+                         saveStatus === 'saved'  ? 'Saved ✓' :
+                         saveStatus === 'error'  ? 'Save failed' :
+                         'Save'}
+                    </button>
+                )}
 
+                {/* Export session for local testing */}
                 {mode === 'admin' && (
                     <button
                         onClick={exportSessionToFile}
